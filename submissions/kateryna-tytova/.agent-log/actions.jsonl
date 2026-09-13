@@ -1,0 +1,4 @@
+{"ts":"2026-09-13T14:31:47.028Z","event":"PreToolUse","id":"toolu_014Hr7iky8mMAf5bsCJ47BVy","session":"ee01348b","mode":"auto","tool":"Glob","pattern":"**/spec.md"}
+{"ts":"2026-09-13T14:31:47.249Z","event":"PostToolUse","id":"toolu_014Hr7iky8mMAf5bsCJ47BVy","session":"ee01348b","mode":"auto","tool":"Glob","pattern":"**/spec.md","exit":0,"ms":79}
+{"ts":"2026-09-13T14:31:49.478Z","event":"PreToolUse","id":"toolu_01DPqfbgXwMevLy1w5nUbGeL","session":"ee01348b","mode":"auto","tool":"Read","path":"spec.md"}
+{"ts":"2026-09-13T14:31:49.691Z","event":"PostToolUse","id":"toolu_01DPqfbgXwMevLy1w5nUbGeL","session":"ee01348b","mode":"auto","tool":"Read","path":"spec.md","exit":0,"ms":13}
