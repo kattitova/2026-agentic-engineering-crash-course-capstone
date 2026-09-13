@@ -36,6 +36,7 @@ overall progress of the job search is visible at a glance.
 | link        | string?                                                     | link to the job posting                  |
 | notes       | string?                                                     | free text                                |
 | appliedDate | DateTime?                                                   | set on the first transition into APPLIED |
+| statusChangedAt | DateTime                                                | defaults to now(); updated only when `status` changes |
 | createdAt   | DateTime                                                    | auto                                     |
 | updatedAt   | DateTime                                                    | auto                                     |
 
@@ -46,9 +47,11 @@ overall progress of the job search is visible at a glance.
 3. Drag a card between columns → updates status (and `appliedDate`, if this
    is the first transition into APPLIED).
 4. Edit and delete an application.
-5. A badge showing "N days in this status" on each card.
+5. A badge showing "N days in this status" on each card (computed from
+   `statusChangedAt`).
 6. Visual flag for "stale" applications (more than 14 days in APPLIED with
-   no movement).
+   no movement, i.e. `status = APPLIED` and `statusChangedAt` older than
+   14 days).
 7. Simple stats above the board: total applications, % that reached
    interview stage.
 
@@ -77,3 +80,11 @@ overall progress of the job search is visible at a glance.
 
 _(Add entries here as work progresses: what changed relative to this initial
 plan, and why. Empty is fine on Day 0.)_
+
+- **2026-09-13 — added `statusChangedAt` to `JobApplication`.** MVP items 5
+  ("N days in this status") and 6 ("stale" flag) need the time of the last
+  status change. `updatedAt` can't be used for that: it also changes when
+  company, position, link or notes are edited, which would reset the counter
+  and hide stale applications. `statusChangedAt` defaults to `now()` on
+  create and is updated only when `status` actually changes (moving a card
+  to the column it's already in doesn't count).
