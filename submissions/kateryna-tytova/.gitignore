@@ -45,3 +45,10 @@ next-env.d.ts
 # local SQLite database
 *.db
 *.db-journal
+
+# agent skills installed by `prisma init` (npx skills add prisma/skills);
+# .claude/skills/prisma-* are symlinks with absolute local paths
+/.agents/
+/.windsurf/
+/.claude/skills/prisma-*
+/skills-lock.json
