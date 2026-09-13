@@ -1,0 +1,33 @@
+// Data model source of truth. Keep in sync with the "Data model" section of spec.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ApplicationStatus {
+  WISHLIST
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+}
+
+model JobApplication {
+  id              String            @id @default(cuid())
+  company         String
+  position        String
+  status          ApplicationStatus @default(WISHLIST)
+  link            String?
+  notes           String?
+  // Set on the first transition into APPLIED.
+  appliedDate     DateTime?
+  // Updated only when `status` actually changes; drives "N days in this status" and the stale flag.
+  statusChangedAt DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
