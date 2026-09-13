@@ -17,7 +17,7 @@ Produce a human-readable report of everything the agent did in this repo, from `
 
 1. Run the bundled script from the project root — never parse the JSONL by hand:
    ```bash
-   node .agents/skills/agent-log-report/scripts/report.mjs --format table
+   node .claude/skills/agent-log-report/scripts/report.mjs --format table
    ```
    Options: `--since <ISO date>` limits the window, `--format json` gives machine output, `--help` prints usage.
 2. Paste the script output verbatim under a `## Agent activity report` heading.
@@ -26,6 +26,6 @@ Produce a human-readable report of everything the agent did in this repo, from `
 
 ## Gotchas
 
-- If the file is missing or empty, say so and suggest checking the hooks in `.claude/settings.json` (`pnpm hooks:selftest`); do not create the log.
+- If the file is missing or empty, say so and suggest checking that the hooks in `.claude/settings.json` point at `.claude/hooks/log-action.mjs` and that the file exists; do not create the log.
 - Lines that are not valid JSON are counted as `invalid` and never crash the report.
 - The `tool` column is whatever the hook wrote: `Read`, `Edit`, `Write`, `Bash`, `Glob`, `Grep`, MCP tools such as `mcp__context7__query-docs`.
