@@ -3,25 +3,25 @@
 import {
   DndContext,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
   type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
-import { useOptimistic, useState, useTransition } from "react";
-import { updateApplicationStatus } from "@/app/actions/applications";
+import { useCallback, useState } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { BOARD_COLUMNS, groupApplicationsByStatus } from "@/lib/applications/board";
 import {
   columnAtPoint,
   keyboardStep,
   planCardMove,
-  type CardMove,
   type ColumnRect,
 } from "@/lib/applications/move";
 import { isApplicationStatus } from "@/lib/applications/status";
 import { BoardColumn } from "./BoardColumn";
+import { useCardMoves } from "./useCardMoves";
 
 /**
  * Moves a picked-up card to the adjacent column instead of dnd-kit's default
@@ -73,19 +73,13 @@ const columnCoordinateGetter: KeyboardCoordinateGetter = (
   return keyboardStep(columns, currentStatus, direction) ?? undefined;
 };
 
-function applyMove(applications: JobApplication[], move: CardMove): JobApplication[] {
-  return applications.map((application) =>
-    application.id === move.cardId ? { ...application, status: move.to } : application,
-  );
-}
-
 export function Board({ applications }: { applications: JobApplication[] }) {
-  // Derived from the server list each render, so once revalidation lands the
-  // stored data wins by construction rather than by manual reconciliation.
-  const [shown, addOptimisticMove] = useOptimistic(applications, applyMove);
-  const [pendingCardId, setPendingCardId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const { shown, isMovePending, error, moveCard } = useCardMoves(applications);
+  // Only set for a keyboard move: after a pointer drag the person's attention is
+  // already where they dropped the card, and focusing would show a ring they
+  // did not ask for.
+  const [focusCardId, setFocusCardId] = useState<string | null>(null);
+  const clearFocusTarget = useCallback(() => setFocusCardId(null), []);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -94,27 +88,19 @@ export function Board({ applications }: { applications: JobApplication[] }) {
     useSensor(KeyboardSensor, { coordinateGetter: columnCoordinateGetter }),
   );
 
-  function handleDragEnd({ active, over }: DragEndEvent) {
+  function handleDragEnd({ active, over, activatorEvent }: DragEndEvent) {
     const from = active.data.current?.["status"];
     if (!isApplicationStatus(from)) {
       return;
     }
 
     const move = planCardMove(String(active.id), from, over?.id);
-    if (move === null) {
-      return;
+    if (move !== null) {
+      setFocusCardId(
+        activatorEvent instanceof KeyboardEvent ? move.cardId : null,
+      );
+      moveCard(move);
     }
-
-    setError(null);
-    setPendingCardId(move.cardId);
-    startTransition(async () => {
-      addOptimisticMove(move);
-      const result = await updateApplicationStatus(move.cardId, move.to);
-      if (!result.ok) {
-        setError(result.error);
-      }
-      setPendingCardId(null);
-    });
   }
 
   const grouped = groupApplicationsByStatus(shown);
@@ -122,7 +108,16 @@ export function Board({ applications }: { applications: JobApplication[] }) {
   return (
     // A stable id, or dnd-kit derives its aria-describedby from a module-level
     // counter that starts over on the client and the tree fails to hydrate.
-    <DndContext id="board" sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      id="board"
+      sensors={sensors}
+      onDragEnd={handleDragEnd}
+      // Measure the columns up front. The default measures them after a drag
+      // starts, so an arrow key pressed in the same breath as the pick-up finds
+      // no rectangles, the coordinate getter has nothing to aim at and the key
+      // press is silently swallowed. Reproduced as a 3-in-15 e2e flake.
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+    >
       {/* Assertive: a move that did not happen has to interrupt, because the card
           moving back is easy to miss. Always rendered so the region exists before
           the message does. */}
@@ -144,7 +139,9 @@ export function Board({ applications }: { applications: JobApplication[] }) {
             key={column.status}
             column={column}
             applications={grouped[column.status]}
-            pendingCardId={pendingCardId}
+            isMovePending={isMovePending}
+            focusCardId={focusCardId}
+            onFocusRestored={clearFocusTarget}
             draggable
           />
         ))}

@@ -1,12 +1,16 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import { useEffect, useRef } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationCard } from "./ApplicationCard";
 
 interface DraggableCardProps {
   application: JobApplication;
   isMovePending: boolean;
+  /** True for the card a keyboard move just landed on. */
+  shouldRestoreFocus?: boolean;
+  onFocusRestored?: () => void;
 }
 
 /**
@@ -16,13 +20,29 @@ interface DraggableCardProps {
  * tested — without a DndContext above it, which is the presentational split the
  * design asks for.
  */
-export function DraggableCard({ application, isMovePending }: DraggableCardProps) {
+export function DraggableCard({
+  application,
+  isMovePending,
+  shouldRestoreFocus = false,
+  onFocusRestored,
+}: DraggableCardProps) {
+  const handleRef = useRef<HTMLButtonElement>(null);
   const { setNodeRef, attributes, listeners, transform, isDragging } = useDraggable({
     id: application.id,
     // A card whose write has not settled must not start another move.
     disabled: isMovePending,
     data: { status: application.status },
   });
+
+  // A completed move disables the handle and then remounts the card under a
+  // different column, so the keyboard user is left on the document body with no
+  // way back except tabbing from the top of the page.
+  useEffect(() => {
+    if (shouldRestoreFocus && !isMovePending) {
+      handleRef.current?.focus();
+      onFocusRestored?.();
+    }
+  }, [shouldRestoreFocus, isMovePending, onFocusRestored]);
 
   return (
     <div
@@ -37,7 +57,7 @@ export function DraggableCard({ application, isMovePending }: DraggableCardProps
       <ApplicationCard
         application={application}
         isMovePending={isMovePending}
-        dragHandle={{ attributes, listeners }}
+        dragHandle={{ attributes, listeners, ref: handleRef }}
       />
     </div>
   );

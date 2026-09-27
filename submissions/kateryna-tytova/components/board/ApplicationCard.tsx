@@ -1,10 +1,13 @@
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
+import type { Ref } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { isHttpUrl } from "@/lib/applications/validation";
 
 export interface DragHandleBinding {
   attributes: DraggableAttributes;
   listeners: DraggableSyntheticListeners;
+  /** Lets the board put focus back on this handle after a keyboard move. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 interface ApplicationCardProps {
@@ -54,6 +57,7 @@ export function ApplicationCard({
             the whole card the drag source turns every link click into a possible
             drag. A button is also focusable and announced as a control for free. */}
         <button
+          ref={dragHandle?.ref}
           type="button"
           disabled={isMovePending}
           aria-label={`Move ${application.company}`}
