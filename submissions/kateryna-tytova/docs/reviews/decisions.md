@@ -28,6 +28,7 @@ fix → review → fix loop: a decision recorded here is closed.
 | 2026-09-27 §3 — what a `NOT_FOUND` failure should do to the board mid-move | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: the action revalidates on its `NOT_FOUND` branch, so a deleted card is not restored. Spec scenario added. Closed. |
 | 2026-09-27 §3 — dnd-kit's default arrow-key step (25px) will not reach the next column | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: `KeyboardSensor` takes a column-aware `coordinateGetter`; task 2.1a and a spec scenario pin one press to one column. Closed. |
 | 2026-09-21 §2 — commit the proposal before implementation | Minor | `add-drag-and-drop` | Applies to that change's history, not to work already done. |
+| `R20260927-6` — wrap/clamp assertions check class substrings, so `line-clamp-3` -> `line-clamp-1` passes | Minor | `add-drag-and-drop` | Same reason as the two guards above: jsdom has no layout engine, so no component test can measure it. The Playwright suite can, alongside tasks 4.2a and 4.2b. Until then the measured Chromium check in task 4.6 of `harden-kanban-board` stands as the manual version. |
 | 2026-09-27 §4 — "read per request, not per build" has no automated guard | Major | `add-drag-and-drop` | The behavioural check is "a row inserted directly into the database appears on reload", which is an e2e check and lands with the Playwright suite. A source-inspecting unit test would pass against a misplaced call; a build-output assertion would put `next build` inside `npm run verify`. Both rejected with reasons in the change's design. Until then the requirement rests on a recorded manual check. |
 
 ## Closed — Declined
@@ -36,6 +37,7 @@ fix → review → fix loop: a decision recorded here is closed.
 | --- | --- | --- |
 | 2026-09-21 §1 — unused `@playwright/test` and `@dnd-kit` packages | Note | They are the dependencies of `add-drag-and-drop`, which is already proposed. Removing and reinstalling would churn the lockfile for no behavioural gain, and `@playwright/test` earned its keep by measuring the layout fix in `harden-kanban-board`. |
 | 2026-09-21 §1 / Open question 1 — disabled "Add application" button has no requirement behind it | Minor | Kept for design fidelity, recorded in the `spec.md` Spec change log — the route `AGENTS.md` prescribes for scope beyond the spec. Becomes a working control in `add-application`. |
+| `R20260927-7` — the red-then-green order in tasks 1.1, 1.3 and 4.x cannot be read out of git history | Minor | Unfixable after the fact, and manufacturing it would be worse than stating it. The change was committed as file groups once the work was done; the commits give granularity, not chronology. Said plainly in the disposition rather than implied away. Closed permanently. |
 | 2026-09-21 §7 / Open question 3 — `listApplications` outside the `ActionResult` convention | Note | Resolved by scoping the convention rather than changing the shape: the read moved to `lib/applications/queries.ts` and keeps throwing, caught by the error boundary. Server actions return `ActionResult`; data loaders throw. Restated in `spec.md`. |
 
 ## Closed — Accepted (fixed)
@@ -60,7 +62,9 @@ verify that the fix is effective (see hard rule 6 in the agent definition).
 
 ## Open — not yet decided
 
-None. Every finding from the 2026-09-27 review is closed above.
+None. Every finding from all three 2026-09-27 passes is closed above. The re-review
+(`reviews/2026-09-27-harden-kanban-board-re-review.md`) returned PASS WITH NOTES with no blocking
+follow-ups, and its two carried-forward Minor items are closed here under the IDs it assigned.
 
 Two notes the author is carrying forward rather than closing silently, both recorded in
 `docs/review-log.md`:
