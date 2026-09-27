@@ -28,7 +28,7 @@ fix → review → fix loop: a decision recorded here is closed.
 | 2026-09-27 §3 — what a `NOT_FOUND` failure should do to the board mid-move | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: the action revalidates on its `NOT_FOUND` branch, so a deleted card is not restored. Spec scenario added. Closed. |
 | 2026-09-27 §3 — dnd-kit's default arrow-key step (25px) will not reach the next column | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: `KeyboardSensor` takes a column-aware `coordinateGetter`; task 2.1a and a spec scenario pin one press to one column. Closed. |
 | 2026-09-21 §2 — commit the proposal before implementation | Minor | `add-drag-and-drop` | Applies to that change's history, not to work already done. |
-| `R20260927-6` — wrap/clamp assertions check class substrings, so `line-clamp-3` -> `line-clamp-1` passes | Minor | `add-drag-and-drop` | Same reason as the two guards above: jsdom has no layout engine, so no component test can measure it. The Playwright suite can, alongside tasks 4.2a and 4.2b. Until then the measured Chromium check in task 4.6 of `harden-kanban-board` stands as the manual version. |
+| `R20260927-6` — wrap/clamp assertions check class substrings, so `line-clamp-3` -> `line-clamp-1` passes | Minor | **still open** | Same reason as the two guards above: jsdom has no layout engine, so no component test can measure it. The Playwright suite can, alongside tasks 4.2a and 4.2b. Until then the measured Chromium check in task 4.6 of `harden-kanban-board` stands as the manual version. |
 | 2026-09-27 §4 — "read per request, not per build" has no automated guard | Major | `add-drag-and-drop` | The behavioural check is "a row inserted directly into the database appears on reload", which is an e2e check and lands with the Playwright suite. A source-inspecting unit test would pass against a misplaced call; a build-output assertion would put `next build` inside `npm run verify`. Both rejected with reasons in the change's design. Until then the requirement rests on a recorded manual check. |
 
 ## Closed — Declined
@@ -60,9 +60,25 @@ verify that the fix is effective (see hard rule 6 in the agent definition).
 | 2026-09-27 §7 — non-null assertion in `BoardColumn.test.tsx` | Minor | `harden-kanban-board` |
 | 2026-09-27 §6 — unnamed card `<article>`, unlabelled column `<section>`, new tab not announced | Minor | `harden-kanban-board` |
 
+## Closed — Accepted (fixed), 2026-09-27 add-drag-and-drop review
+
+| Finding | Severity | Fixed in |
+| --- | --- | --- |
+| `R20260927-8` — keyboard coordinate getter changed only `x`, so an arrow press across a row boundary stored the wrong status and Offer/Rejected were unreachable below 1280px | Major | `add-drag-and-drop` — geometry moved to `lib/applications/move.ts` with unit tests; a second Playwright project runs at 1100px |
+| `R20260927-9` — one `pendingCardId` instead of a set let a second drag release the first card's handle before its write settled | Major | `add-drag-and-drop` — `useCardMoves` holds a set; six hook tests, including the interleaved case |
+| `R20260927-10` — the "failed move leaves the board truthful" requirement had no test at any level | Major | `add-drag-and-drop` — reachable now that the coordination is a hook, so the action can be mocked |
+| `R20260927-11` — `spec.md` gained no change-log entry for MVP item 3 | Minor | `add-drag-and-drop` |
+| `R20260927-12` — focus lost after a keyboard move | Major→Minor as filed | `add-drag-and-drop` — restored only for keyboard moves; pinned by an e2e assertion |
+
 ## Open — not yet decided
 
-None. Every finding from all three 2026-09-27 passes is closed above. The re-review
+One, carried deliberately.
+
+| Finding | Severity | Note |
+| --- | --- | --- |
+| `R20260927-6` — the clamp/wrap assertions match class substrings, so `line-clamp-3` → `line-clamp-1` passes | Minor | The deferral to Playwright was **not** honoured: the suite measures page overflow, not the clamp depth. The measured Chromium observation recorded in `harden-kanban-board` task 4.6 is still the only evidence. Decide in `add-application` or a later change — either add a rendered-height assertion or accept the limit in writing. |
+
+Everything else from all four 2026-09-27 passes is closed above. The re-review
 (`reviews/2026-09-27-harden-kanban-board-re-review.md`) returned PASS WITH NOTES with no blocking
 follow-ups, and its two carried-forward Minor items are closed here under the IDs it assigned.
 

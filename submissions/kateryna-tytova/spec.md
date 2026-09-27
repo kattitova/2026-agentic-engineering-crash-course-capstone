@@ -119,3 +119,19 @@ plan, and why. Empty is fine on Day 0.)_
   "the board shows the applications as they are stored at the moment the page is
   served" for any change made outside the app. `listApplications` now calls
   `connection()` before querying, and `/` builds as dynamic.
+
+- **2026-09-27 — MVP item 3 (drag a card between columns) is implemented.**
+  Cards move by pointer and by keyboard, and the status change is stored. Three
+  decisions are worth recording because none of them is obvious from the code.
+  First, dnd-kit's keyboard sensor moves a fixed 25px per arrow key, which is a
+  fraction of a column, so it is given a column-aware `coordinateGetter`; the
+  rectangle arithmetic lives in `lib/applications/move.ts` and resolves both
+  axes, because the grid wraps below 1280px and the next column in funnel order
+  can be on the next row. Second, a card whose write is outstanding cannot be
+  moved again — the set of writing cards is tracked, not a single id, so a
+  second card's move cannot release the first. Third, `updateApplicationStatus`
+  revalidates on its `NOT_FOUND` branch, so a card whose row was deleted
+  mid-move is removed rather than restored to a column it no longer belongs to.
+  This also satisfies the Definition of Done's e2e requirement: the Playwright
+  suite moves a card with the keyboard and asserts the move survives a reload,
+  at both a single-row and a wrapped viewport.
