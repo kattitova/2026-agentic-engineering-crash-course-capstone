@@ -8,8 +8,11 @@ export default defineConfig({
     },
   },
   test: {
+    // Stays "node": the pure-logic tests are the fast feedback loop and don't
+    // need a DOM. Component tests opt in per file with
+    // `// @vitest-environment jsdom`.
     environment: "node",
-    include: ["**/*.test.ts"],
+    include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules/**", ".next/**", "e2e/**"],
   },
 });
