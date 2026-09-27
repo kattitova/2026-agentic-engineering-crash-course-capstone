@@ -8,15 +8,31 @@ interface BoardColumnProps {
 }
 
 export function BoardColumn({ column, applications }: BoardColumnProps) {
+  const headingId = `column-${column.status}-heading`;
+  const count = applications.length;
+
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-200/55 p-3">
+    // Named region, so the columns become landmarks a keyboard user can jump between.
+    <section
+      aria-labelledby={headingId}
+      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-200/55 p-3"
+    >
       <div className="flex items-center justify-between px-1">
-        <h2 className="flex items-center gap-2 text-sm font-semibold leading-5 text-slate-700">
+        <h2
+          id={headingId}
+          className="flex items-center gap-2 text-sm font-semibold leading-5 text-slate-700"
+        >
           <span className={`size-2.5 rounded-full ${column.dotClass}`} aria-hidden="true" />
           {column.label}
         </h2>
         <span className="rounded-full bg-white px-2 py-px text-xs font-medium text-slate-500 shadow-sm">
-          {applications.length}
+          {/* Real text rather than an aria-label: the badge is a bare <span>, whose
+              `generic` role is name-prohibited in ARIA, so a label on it is not
+              something a screen reader can be relied on to announce. */}
+          <span aria-hidden="true">{count}</span>
+          {/* One template literal, not `{count} {word}`: JSX would emit three text
+              nodes and the accessibility tree would carry no "3 applications" name. */}
+          <span className="sr-only">{`${count} ${count === 1 ? "application" : "applications"}`}</span>
         </span>
       </div>
 

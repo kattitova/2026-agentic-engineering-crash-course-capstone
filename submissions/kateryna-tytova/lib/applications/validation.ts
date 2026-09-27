@@ -39,7 +39,8 @@ function optionalText(value: unknown): string | null | undefined {
   return trimmed === "" ? null : trimmed;
 }
 
-function isHttpUrl(value: string): boolean {
+/** Exported so the render path can re-check a stored value it did not write. */
+export function isHttpUrl(value: string): boolean {
   try {
     const { protocol } = new URL(value);
     return protocol === "http:" || protocol === "https:";
