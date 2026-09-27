@@ -13,13 +13,23 @@ import { useOptimistic, useState, useTransition } from "react";
 import { updateApplicationStatus } from "@/app/actions/applications";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { BOARD_COLUMNS, groupApplicationsByStatus } from "@/lib/applications/board";
-import { adjacentColumn, planCardMove, type CardMove } from "@/lib/applications/move";
+import {
+  columnAtPoint,
+  keyboardStep,
+  planCardMove,
+  type CardMove,
+  type ColumnRect,
+} from "@/lib/applications/move";
 import { isApplicationStatus } from "@/lib/applications/status";
 import { BoardColumn } from "./BoardColumn";
 
 /**
  * Moves a picked-up card to the adjacent column instead of dnd-kit's default
  * 25px nudge, which is a fraction of a column and never reaches the next one.
+ *
+ * Only measurement and event decoding live here; which column is next, and
+ * where it is, are decided by pure functions in lib/applications/move.ts, so
+ * the wrapped-grid case is covered by unit tests rather than by a browser.
  *
  * Up/Down return undefined — dnd-kit reads that as "no movement" — because
  * position within a column carries no meaning in the data model.
@@ -33,23 +43,34 @@ const columnCoordinateGetter: KeyboardCoordinateGetter = (
     return undefined;
   }
 
-  // Where the card is now: the column it is hovering, falling back to the one it
-  // was picked up from before the first key press.
-  const hovered = droppableContainers
-    .getEnabled()
-    .find((container) => droppableRects.get(container.id)?.left === collisionRect.left);
-  const currentStatus = hovered?.id ?? active.data.current?.["status"];
+  const columns: ColumnRect[] = [];
+  for (const container of droppableContainers.getEnabled()) {
+    const rect = droppableRects.get(container.id);
+    if (rect && isApplicationStatus(container.id)) {
+      columns.push({
+        status: container.id,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+  }
+
+  // Where the card is now, by the centre of its own rect so a wrapped grid
+  // cannot confuse two columns that share a left edge. Falls back to the column
+  // it was picked up from, which is the only answer before the first key press.
+  const centre = {
+    x: collisionRect.left + collisionRect.width / 2,
+    y: collisionRect.top + collisionRect.height / 2,
+  };
+  const currentStatus =
+    columnAtPoint(columns, centre) ?? active.data.current?.["status"];
   if (!isApplicationStatus(currentStatus)) {
     return undefined;
   }
 
-  const target = adjacentColumn(currentStatus, direction);
-  const rect = target === null ? undefined : droppableRects.get(target);
-  if (!rect) {
-    return undefined;
-  }
-
-  return { x: rect.left, y: collisionRect.top };
+  return keyboardStep(columns, currentStatus, direction) ?? undefined;
 };
 
 function applyMove(applications: JobApplication[], move: CardMove): JobApplication[] {

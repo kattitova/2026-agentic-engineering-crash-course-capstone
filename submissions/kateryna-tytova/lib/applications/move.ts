@@ -58,3 +58,54 @@ export function adjacentColumn(
   }
   return BOARD_COLUMNS[index + direction]?.status ?? null;
 }
+
+/** A measured column, as the board lays it out on screen. */
+export interface ColumnRect {
+  status: ApplicationStatus;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The column whose rectangle contains `point`, or null if none does.
+ *
+ * Both axes matter. The board's grid wraps below `xl`, and once it does, Offer
+ * sits directly below Wishlist at the same `left` — so a lookup that compares
+ * only the horizontal edge cannot tell them apart.
+ */
+export function columnAtPoint(
+  columns: readonly ColumnRect[],
+  point: { x: number; y: number },
+): ApplicationStatus | null {
+  const hit = columns.find(
+    (column) =>
+      point.x >= column.left &&
+      point.x <= column.left + column.width &&
+      point.y >= column.top &&
+      point.y <= column.top + column.height,
+  );
+  return hit?.status ?? null;
+}
+
+/**
+ * Where to place a picked-up card so it lands on the next column along the
+ * funnel, or null when there is no such column or it was never measured.
+ *
+ * Returns both coordinates, not just `x`: the next column in funnel order can
+ * be on the next row, and carrying the old `y` over would drop the card on
+ * whichever column shares that row instead.
+ */
+export function keyboardStep(
+  columns: readonly ColumnRect[],
+  from: ApplicationStatus,
+  direction: ColumnDirection,
+): { x: number; y: number } | null {
+  const target = adjacentColumn(from, direction);
+  if (target === null) {
+    return null;
+  }
+  const rect = columns.find((column) => column.status === target);
+  return rect ? { x: rect.left, y: rect.top } : null;
+}
