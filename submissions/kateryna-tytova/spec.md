@@ -88,3 +88,34 @@ plan, and why. Empty is fine on Day 0.)_
   and hide stale applications. `statusChangedAt` defaults to `now()` on
   create and is updated only when `status` actually changes (moving a card
   to the column it's already in doesn't count).
+
+- **2026-09-27 — the disabled "Add application" button stays until MVP item 2.**
+  A review pass noted that the header's inert button is functionality the
+  kanban-board spec does not require, and that the "Scope" rule in `AGENTS.md`
+  asks for spec.md to be updated first. Recording the decision here rather than
+  removing the control: it keeps the header faithful to the intended layout, it
+  cannot be activated, and it becomes the real trigger in the add-application
+  change. If that change is dropped, the button goes with it.
+
+- **2026-09-27 — read path and write path have different error shapes, on
+  purpose.** Server actions are mutations: they validate their arguments,
+  return `ActionResult` (`{ ok: false, error }`) and never throw. Data loaders
+  are ordinary async functions in `lib/applications/`: they throw, and
+  `app/error.tsx` shows the failure and offers a retry. `listApplications` moved
+  out of `app/actions/applications.ts` to make this exact — that file carries a
+  file-level `"use server"`, which had published a read query as a callable
+  endpoint. `app/error.tsx` is a new file this plan did not list; it is the half
+  of the convention that makes a throwing loader a deliberate choice rather than
+  an unhandled one. Its limit is known and accepted: React error boundaries need
+  a Suspense boundary to recover into, so a failure on the very first request is
+  still served as Next's error page. Giving that case a boundary would mean
+  putting a loading placeholder in the first paint, which the board's spec
+  forbids.
+
+- **2026-09-27 — the board page renders per request, not at build time.**
+  Found while hardening the board: `next build` reported `/` as static, because
+  Prisma runs on `better-sqlite3` and a synchronous driver completes its query
+  during prerendering. The data was therefore frozen at build time, which breaks
+  "the board shows the applications as they are stored at the moment the page is
+  served" for any change made outside the app. `listApplications` now calls
+  `connection()` before querying, and `/` builds as dynamic.
