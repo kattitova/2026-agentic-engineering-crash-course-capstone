@@ -52,3 +52,6 @@ next-env.d.ts
 /.windsurf/
 /.claude/skills/prisma-*
 /skills-lock.json
+
+# hook state: which completed changes were already announced as review-ready
+/.agent-log/review-ready.json
