@@ -85,6 +85,28 @@ describe("ApplicationCard", () => {
     expect(screen.getByRole("article", { name: "Acme Cloud" })).toBeInTheDocument();
   });
 
+  it("offers a move control named after its application", () => {
+    // Without the company in the name, a board of handles is "Move application"
+    // repeated once per card.
+    render(<ApplicationCard application={application()} />);
+
+    expect(
+      screen.getByRole("button", { name: /move Acme Cloud/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("disables the move control while that card's move is being stored", () => {
+    render(<ApplicationCard application={application()} isMovePending />);
+
+    expect(screen.getByRole("button", { name: /move Acme Cloud/i })).toBeDisabled();
+  });
+
+  it("leaves the move control enabled when no move is in flight", () => {
+    render(<ApplicationCard application={application()} />);
+
+    expect(screen.getByRole("button", { name: /move Acme Cloud/i })).toBeEnabled();
+  });
+
   it("says the posting link opens a new tab", () => {
     render(<ApplicationCard application={application({ link: "https://acme.test/job" })} />);
 
