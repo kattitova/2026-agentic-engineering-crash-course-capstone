@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
-import { planCardMove } from "./move";
+import { BOARD_COLUMNS } from "./board";
+import { adjacentColumn, planCardMove } from "./move";
 
 describe("planCardMove", () => {
   it("plans a move when the card is dropped on a different column", () => {
@@ -40,5 +41,35 @@ describe("planCardMove", () => {
         expect(plan === null).toBe(from === to);
       }
     }
+  });
+});
+
+describe("adjacentColumn", () => {
+  it("steps forward through the funnel", () => {
+    expect(adjacentColumn(ApplicationStatus.WISHLIST, 1)).toBe(ApplicationStatus.APPLIED);
+    expect(adjacentColumn(ApplicationStatus.APPLIED, 1)).toBe(ApplicationStatus.INTERVIEW);
+    expect(adjacentColumn(ApplicationStatus.OFFER, 1)).toBe(ApplicationStatus.REJECTED);
+  });
+
+  it("steps backward through the funnel", () => {
+    expect(adjacentColumn(ApplicationStatus.REJECTED, -1)).toBe(ApplicationStatus.OFFER);
+    expect(adjacentColumn(ApplicationStatus.APPLIED, -1)).toBe(ApplicationStatus.WISHLIST);
+  });
+
+  it("stops at both ends rather than wrapping", () => {
+    // Wrapping would move a card from Rejected to Wishlist on one key press,
+    // which is never what the person meant.
+    expect(adjacentColumn(ApplicationStatus.WISHLIST, -1)).toBeNull();
+    expect(adjacentColumn(ApplicationStatus.REJECTED, 1)).toBeNull();
+  });
+
+  it("follows funnel order, not the enum's declaration order", () => {
+    const walked: ApplicationStatus[] = [ApplicationStatus.WISHLIST];
+    let current: ApplicationStatus | null = ApplicationStatus.WISHLIST;
+    while ((current = adjacentColumn(current, 1)) !== null) {
+      walked.push(current);
+    }
+
+    expect(walked).toEqual(BOARD_COLUMNS.map((column) => column.status));
   });
 });
