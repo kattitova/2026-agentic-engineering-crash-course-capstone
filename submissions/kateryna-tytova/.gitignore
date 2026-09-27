@@ -55,3 +55,8 @@ next-env.d.ts
 
 # hook state: which completed changes were already announced as review-ready
 /.agent-log/review-ready.json
+
+# playwright run artefacts
+/test-results/
+/playwright-report/
+/blob-report/
