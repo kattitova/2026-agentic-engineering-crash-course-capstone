@@ -1,5 +1,5 @@
-import { listApplications } from "@/app/actions/applications";
 import { Board } from "@/components/board/Board";
+import { listApplications } from "@/lib/applications/queries";
 
 export default async function Home() {
   const applications = await listApplications();

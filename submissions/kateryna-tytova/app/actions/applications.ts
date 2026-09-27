@@ -24,10 +24,6 @@ function isRecordNotFound(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025";
 }
 
-export async function listApplications(): Promise<JobApplication[]> {
-  return prisma.jobApplication.findMany({ orderBy: { createdAt: "desc" } });
-}
-
 export async function createApplication(
   input: RawApplicationInput,
 ): Promise<ActionResult<JobApplication>> {
