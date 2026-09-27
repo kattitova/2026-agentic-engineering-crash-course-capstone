@@ -59,6 +59,10 @@ export async function updateApplicationStatus(
   });
 
   if (!application) {
+    // Revalidate on this branch too: the board is optimistically showing a card
+    // for a row that no longer exists, and the client's rollback would only put
+    // it back in a column it no longer belongs to.
+    revalidatePath(BOARD_PATH);
     return NOT_FOUND;
   }
   revalidatePath(BOARD_PATH);

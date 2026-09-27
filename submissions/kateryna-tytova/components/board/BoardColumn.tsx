@@ -1,21 +1,39 @@
+"use client";
+
+import { useDroppable } from "@dnd-kit/core";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import type { BoardColumn as BoardColumnDefinition } from "@/lib/applications/board";
 import { ApplicationCard } from "./ApplicationCard";
+import { DraggableCard } from "./DraggableCard";
 
 interface BoardColumnProps {
   column: BoardColumnDefinition;
   applications: JobApplication[];
+  /** Absent when the column is rendered outside a DndContext, as in its tests. */
+  pendingCardId?: string | null;
+  draggable?: boolean;
 }
 
-export function BoardColumn({ column, applications }: BoardColumnProps) {
+export function BoardColumn({
+  column,
+  applications,
+  pendingCardId = null,
+  draggable = false,
+}: BoardColumnProps) {
   const headingId = `column-${column.status}-heading`;
   const count = applications.length;
+  // The droppable id is the status itself, so the drop target needs no lookup
+  // table and planCardMove can validate it like any other untrusted value.
+  const { setNodeRef, isOver } = useDroppable({ id: column.status, disabled: !draggable });
 
   return (
     // Named region, so the columns become landmarks a keyboard user can jump between.
     <section
+      ref={draggable ? setNodeRef : undefined}
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-200/55 p-3"
+      className={`flex flex-col gap-3 rounded-2xl border p-3 transition-colors ${
+        isOver ? "border-indigo-400 bg-indigo-100/70" : "border-slate-200 bg-slate-200/55"
+      }`}
     >
       <div className="flex items-center justify-between px-1">
         <h2
@@ -39,9 +57,17 @@ export function BoardColumn({ column, applications }: BoardColumnProps) {
       {applications.length === 0 ? (
         <p className="px-1 py-6 text-center text-xs text-slate-500">No applications yet</p>
       ) : (
-        applications.map((application) => (
-          <ApplicationCard key={application.id} application={application} />
-        ))
+        applications.map((application) =>
+          draggable ? (
+            <DraggableCard
+              key={application.id}
+              application={application}
+              isMovePending={application.id === pendingCardId}
+            />
+          ) : (
+            <ApplicationCard key={application.id} application={application} />
+          ),
+        )
       )}
     </section>
   );
