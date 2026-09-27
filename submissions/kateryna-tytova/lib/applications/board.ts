@@ -1,5 +1,6 @@
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
+import { isApplicationStatus } from "./status";
 
 export interface BoardColumn {
   status: ApplicationStatus;
@@ -36,6 +37,10 @@ export type ApplicationsByStatus = Record<ApplicationStatus, JobApplication[]>;
 /**
  * Groups applications by status, with an entry for every status, so callers
  * never branch on a missing key for an empty column.
+ *
+ * An application whose stored status isn't one of the five is left out: SQLite
+ * doesn't enforce the enum, and this runs in a Server Component, so indexing
+ * blind would turn one bad row into a blank page.
  */
 export function groupApplicationsByStatus(
   applications: readonly JobApplication[],
@@ -49,6 +54,9 @@ export function groupApplicationsByStatus(
   };
 
   for (const application of applications) {
+    if (!isApplicationStatus(application.status)) {
+      continue;
+    }
     grouped[application.status].push(application);
   }
 

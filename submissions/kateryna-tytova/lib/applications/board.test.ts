@@ -52,10 +52,19 @@ describe("BOARD_COLUMNS", () => {
     ]);
   });
 
-  it("gives every column a colour for its status dot", () => {
-    for (const column of BOARD_COLUMNS) {
-      expect(column.dotClass.trim()).not.toBe("");
-    }
+  it("gives every column its own colour for the status dot", () => {
+    const dotClasses = BOARD_COLUMNS.map((column) => column.dotClass);
+
+    // Pinned, not just non-empty: two columns sharing a colour makes the funnel
+    // unreadable, and a typo'd Tailwind class renders no dot at all.
+    expect(dotClasses).toEqual([
+      "bg-slate-400",
+      "bg-sky-500",
+      "bg-violet-500",
+      "bg-emerald-500",
+      "bg-rose-400",
+    ]);
+    expect(new Set(dotClasses).size).toBe(dotClasses.length);
   });
 });
 
@@ -91,6 +100,18 @@ describe("groupApplicationsByStatus", () => {
     const grouped = groupApplicationsByStatus([first, second, third]);
 
     expect(grouped.APPLIED.map((item) => item.id)).toEqual(["first", "second", "third"]);
+  });
+
+  it("skips an application whose stored status is not one of the five", () => {
+    // SQLite doesn't enforce the enum, so a seed script or a hand edit can store
+    // anything. The cast reproduces that row; it can't arise from the typed API.
+    const unknown = application("bad", "ARCHIVED" as ApplicationStatus);
+    const applied = application("good", "APPLIED");
+
+    const grouped = groupApplicationsByStatus([unknown, applied]);
+
+    expect(grouped.APPLIED).toEqual([applied]);
+    expect(BOARD_COLUMNS.flatMap((column) => grouped[column.status])).toEqual([applied]);
   });
 
   it("loses and duplicates nothing", () => {
