@@ -71,6 +71,14 @@ async function moveRightWithKeyboard(
   await page.keyboard.press("Space");
   await expect(announcements).toContainText(/moved over droppable area/i);
 
+  // dnd-kit attaches its keydown listener inside a setTimeout
+  // (@dnd-kit/core/dist/core.cjs.development.js:1163), so for one macrotask the
+  // drag is already active - announced, aria-pressed - while no listener exists
+  // and an arrow key is silently dropped. Observed as a 3-in-15 flake in which
+  // the coordinate getter was never called at all. Yielding one macrotask here
+  // is ordered after theirs, because theirs was queued first.
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
   await page.keyboard.press("ArrowRight");
   await expect(announcements).toContainText(
     new RegExp(`moved over droppable area ${targetStatus}`, "i"),
@@ -99,6 +107,18 @@ test("moves a card to the next column with the keyboard", async ({ page }) => {
   // asserting rather than assuming.
   await expect(column(page, "Applied").getByText("0 applications")).toBeVisible();
   await expect(column(page, "Interview").getByText("2 applications")).toBeVisible();
+});
+
+test("leaves focus on the moved card after a keyboard move", async ({ page }) => {
+  // Completing a move disables the handle and then remounts the card under
+  // another column, so without restoring focus the keyboard user lands on the
+  // document body and has to tab in from the top of the page.
+  await page.goto("/");
+  await moveRightWithKeyboard(page, "Acme Cloud", "INTERVIEW");
+
+  await expect(
+    page.getByRole("button", { name: "Move Acme Cloud" }),
+  ).toBeFocused();
 });
 
 test("the move survives a reload", async ({ page }) => {

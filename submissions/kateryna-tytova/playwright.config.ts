@@ -14,7 +14,15 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    // 1280px is exactly the xl breakpoint, so this project only ever sees the
+    // five columns on one row.
+    { name: "wide", use: { ...devices["Desktop Chrome"] } },
+    // Below xl the grid wraps and Offer lands directly under Wishlist at the
+    // same left edge. A keyboard step across that boundary is the case a review
+    // pass found broken, and the wide project cannot see it.
+    { name: "wrapped", use: { ...devices["Desktop Chrome"], viewport: { width: 1100, height: 900 } } },
+  ],
   webServer: {
     // A production build, not `next dev`, for two reasons: Next refuses a second
     // dev server for the same directory, so a run would fail whenever one is
