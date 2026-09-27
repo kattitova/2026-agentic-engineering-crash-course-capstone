@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
 import { BOARD_COLUMNS } from "./board";
-import { adjacentColumn, planCardMove } from "./move";
+import {
+  adjacentColumn,
+  columnAtPoint,
+  keyboardStep,
+  planCardMove,
+  type ColumnRect,
+} from "./move";
 
 describe("planCardMove", () => {
   it("plans a move when the card is dropped on a different column", () => {
@@ -71,5 +77,68 @@ describe("adjacentColumn", () => {
     }
 
     expect(walked).toEqual(BOARD_COLUMNS.map((column) => column.status));
+  });
+});
+
+// Geometry measured from the running board, so the fixtures are not invented:
+// at 1280px the five columns share a row; at 1100px the grid wraps to three and
+// then two, which puts Offer directly below Wishlist at the same `left`.
+const ONE_ROW: ColumnRect[] = [
+  { status: ApplicationStatus.WISHLIST, left: 40, top: 112, width: 243, height: 400 },
+  { status: ApplicationStatus.APPLIED, left: 283, top: 112, width: 243, height: 400 },
+  { status: ApplicationStatus.INTERVIEW, left: 526, top: 112, width: 243, height: 400 },
+  { status: ApplicationStatus.OFFER, left: 770, top: 112, width: 243, height: 400 },
+  { status: ApplicationStatus.REJECTED, left: 1013, top: 112, width: 243, height: 400 },
+];
+
+const TWO_ROWS: ColumnRect[] = [
+  { status: ApplicationStatus.WISHLIST, left: 40, top: 112, width: 345, height: 160 },
+  { status: ApplicationStatus.APPLIED, left: 385, top: 112, width: 345, height: 160 },
+  { status: ApplicationStatus.INTERVIEW, left: 731, top: 112, width: 345, height: 160 },
+  { status: ApplicationStatus.OFFER, left: 40, top: 289, width: 345, height: 160 },
+  { status: ApplicationStatus.REJECTED, left: 385, top: 289, width: 345, height: 160 },
+];
+
+describe("columnAtPoint", () => {
+  it("finds the column under a point", () => {
+    expect(columnAtPoint(ONE_ROW, { x: 600, y: 200 })).toBe(ApplicationStatus.INTERVIEW);
+  });
+
+  it("tells apart two columns that share a left edge on different rows", () => {
+    // The defect this exists to prevent: matching on `left` alone makes Offer
+    // indistinguishable from Wishlist once the grid wraps.
+    expect(columnAtPoint(TWO_ROWS, { x: 100, y: 150 })).toBe(ApplicationStatus.WISHLIST);
+    expect(columnAtPoint(TWO_ROWS, { x: 100, y: 330 })).toBe(ApplicationStatus.OFFER);
+  });
+
+  it("returns null for a point outside every column", () => {
+    expect(columnAtPoint(ONE_ROW, { x: 5, y: 5 })).toBeNull();
+  });
+});
+
+describe("keyboardStep", () => {
+  it("moves along the row when the columns share one", () => {
+    expect(keyboardStep(ONE_ROW, ApplicationStatus.APPLIED, 1)).toEqual({ x: 526, y: 112 });
+  });
+
+  it("follows the funnel across a row boundary", () => {
+    // Interview is last on row 1 and Offer is first on row 2. Returning Offer's
+    // x with row 1's y lands the card on Wishlist and stores a status the person
+    // never chose.
+    expect(keyboardStep(TWO_ROWS, ApplicationStatus.INTERVIEW, 1)).toEqual({ x: 40, y: 289 });
+  });
+
+  it("steps backward across a row boundary too", () => {
+    expect(keyboardStep(TWO_ROWS, ApplicationStatus.OFFER, -1)).toEqual({ x: 731, y: 112 });
+  });
+
+  it("stays put at both ends of the funnel", () => {
+    expect(keyboardStep(TWO_ROWS, ApplicationStatus.WISHLIST, -1)).toBeNull();
+    expect(keyboardStep(TWO_ROWS, ApplicationStatus.REJECTED, 1)).toBeNull();
+  });
+
+  it("returns null when the target column was never measured", () => {
+    const withoutOffer = TWO_ROWS.filter((c) => c.status !== ApplicationStatus.OFFER);
+    expect(keyboardStep(withoutOffer, ApplicationStatus.INTERVIEW, 1)).toBeNull();
   });
 });
