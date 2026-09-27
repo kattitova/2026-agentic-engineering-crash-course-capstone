@@ -56,13 +56,73 @@ and "did I click or drag?" stays ambiguous at small movements.
 ### Pointer and keyboard sensors, keyboard as the tested path
 
 dnd-kit's `PointerSensor` and `KeyboardSensor` are both registered. The keyboard path — focus
-the handle, Space to pick up, arrow keys to choose a column, Space to drop — is what the e2e
+the handle, Space to pick up, Left/Right to choose a column, Space to drop — is what the e2e
 test drives.
 
 Alternative considered: driving the pointer sensor from Playwright with synthetic mouse moves.
 Rejected — it needs intermediate move events and timing fudges, which is where drag e2e tests
 usually become flaky. The keyboard path exercises the same `onDragEnd` handler and the same
 server action, so it tests the behaviour that matters rather than the input device.
+
+### The keyboard sensor needs a column-aware `coordinateGetter`
+
+Registering `KeyboardSensor` is not enough, and this is the point the plan previously glossed.
+dnd-kit's default keyboard coordinate getter translates the drag by a flat **25 pixels** per arrow
+key (`@dnd-kit/core/dist/core.cjs.development.js:1114-1131`, verified by reading it). Board columns
+measure 259px at a 1440px viewport, so a single arrow press lands the pointer inside the column it
+started in: the drag never reaches a neighbouring droppable.
+
+`KeyboardSensor` therefore takes a custom `coordinateGetter`. On Left/Right it reads the droppable
+rects from the sensor context, finds the column adjacent to the active card's current column in
+funnel order, and returns that rect's centre. Up/Down return `undefined`, which dnd-kit treats as
+"no movement": vertical position inside a column carries no meaning, since ordering within a column
+is out of scope.
+
+Alternative considered: `sortableKeyboardCoordinates` from `@dnd-kit/sortable`. Rejected — it
+resolves coordinates between *sortable items*, and the columns here are plain droppables with no
+sortable context. Alternative considered: leaving the default and pressing the arrow key enough
+times to cross a column. Rejected outright — it makes the number of key presses depend on the
+viewport, which is neither operable for a real keyboard user nor a test that means anything.
+
+Below `xl` the grid wraps onto several rows. Left/Right still walk funnel order, which is also
+reading order there, so the interaction stays coherent without special-casing the layout.
+
+### A card with a move in flight cannot be moved again
+
+While a card's status write is outstanding, that card's drag handle is disabled. Other cards stay
+draggable: they are different rows, so their writes cannot race each other.
+
+This answers the question left open across two review passes. Each `updateApplicationStatus` call
+is internally transactional, so the database cannot be corrupted — but two overlapping calls for
+one card settle in completion order, which need not be the order the user dragged in, and the
+optimistic state can come to rest on the earlier result. Gating removes the race rather than
+resolving it.
+
+Alternative considered: accepting every drag and reconciling on the latest *issued* move. Rejected
+— it means tracking an issue sequence per card and discarding responses that arrive out of order,
+which is real machinery for a case reachable only by deliberately shaking a card back and forth in
+a local single-user tracker. Gating is trivially correct and can be asserted directly: the handle
+is disabled.
+
+The pending card is tracked by id rather than by `useTransition`'s single `isPending`, which would
+freeze the whole board while any one card was being written.
+
+### A move that finds nothing must not put the card back
+
+`updateApplicationStatus` returns `NOT_FOUND` *before* `revalidatePath`
+(`app/actions/applications.ts:57-64`). The failure path in this change drops the optimistic move, so
+the card would reappear in the column it came from — a column it no longer belongs to, because the
+row is gone — and nothing would remove it until the next reload. That is exactly what "the board
+stays truthful after a failure" forbids.
+
+`updateApplicationStatus` therefore revalidates the board path on the `NOT_FOUND` branch too. The
+visible result is a brief return followed by the card disappearing, which is honest: the rollback
+and the revalidation are two different facts arriving in order.
+
+Alternative considered: `router.refresh()` on the client after any failed move. Rejected as the
+primary fix — it is blunter, it re-fetches on failures where the board is not stale at all, and it
+leaves the same hole for any other caller of the action. The server-side revalidation is precise
+and benefits the delete flow a later change will add.
 
 ### Optimistic move, reconciled by revalidation
 
@@ -105,10 +165,22 @@ so the inner loop is not slowed by a build.
 - **A failure message that no one notices** → the message goes in an assertive live region
   above the board, and the card visibly returns, so the failure is legible without it.
 - **Keyboard-only e2e coverage could hide a pointer-only regression** → both sensors end in the
-  same `onDragEnd` handler; the risk is limited to sensor wiring, which is dnd-kit's code.
+  same `onDragEnd` handler; the risk is limited to sensor wiring. That is no longer purely
+  dnd-kit's code, since the keyboard path now carries a custom `coordinateGetter`, so the pointer
+  path gets at least one manual check recorded in tasks.
+- **The custom `coordinateGetter` drifts from the column definitions** → it derives adjacency from
+  `BOARD_COLUMNS`, the same exhaustive table the board renders from, rather than from a second list
+  of its own. A new status fails to compile there first.
+- **Gating hides a stuck write** → if an action never settles, that card's handle stays disabled
+  with no explanation. The failure path clears the pending card on both success and failure, and
+  the live region reports the failure, so the only way to strand a handle is a promise that never
+  resolves.
 - **Cards carry a link and a drag handle in a small area** → the handle is a separate control
   with its own hit area, sized to stay comfortably tappable.
 
 ## Open Questions
 
-None that block implementation.
+None. Two questions carried from the review passes are answered above rather than left open: a
+second drag of a card with a move in flight is refused at the handle, and a move that finds no row
+revalidates instead of restoring the card. The keyboard step size is settled by the custom
+`coordinateGetter`.

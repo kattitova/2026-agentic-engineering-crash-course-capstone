@@ -20,9 +20,15 @@ untouched when a card is dropped back into its own column.
   "N days in this status" clock that a later change will display.
 - The card moves immediately on drop and is reconciled with the server result, so the board
   never appears frozen while the write completes.
-- If the write fails, the card returns to its original column and the board reports the failure
-  instead of silently showing a state the database does not have.
-- Cards can also be moved with the keyboard, so the interaction works without a pointer.
+- If the write fails, the board reports the failure instead of silently showing a state the
+  database does not have. The card returns to its original column — unless the application turned
+  out to be gone, in which case it is not restored, because no column is truthful for a row that no
+  longer exists.
+- While a card's move is being stored, that card cannot be moved again. Two moves of one card would
+  otherwise settle in completion order rather than in the order they were made.
+- Cards can also be moved with the keyboard, so the interaction works without a pointer. One key
+  press moves one column: dnd-kit's keyboard sensor moves a fixed 25px per arrow key by default,
+  which is a fraction of a column, so it is given a column-aware coordinate getter.
 - The board gains its first client component. The page stays a Server Component and keeps
   loading the data.
 - Playwright gains configuration, and the suite gains an e2e test that moves a card between
@@ -53,12 +59,16 @@ Not in this change:
 - **Code**: `components/board/Board.tsx` becomes a client component hosting the drag context;
   `components/board/BoardColumn.tsx` gains a drop target and `ApplicationCard.tsx` a drag
   handle. `app/page.tsx` is unchanged beyond what it already passes down.
-- **Server actions**: none changed. `updateApplicationStatus` is called as it stands.
+- **Server actions**: `updateApplicationStatus` gains one line — it revalidates the board path on
+  its `NOT_FOUND` branch, so a card whose row was deleted mid-move does not linger. Its status
+  logic is unchanged.
 - **Data**: no schema change, no migration.
 - **Dependencies**: none added. `@dnd-kit/core` is already installed and unused until now.
   `@dnd-kit/sortable` stays unused, since within-column ordering is out of scope.
 - **Tests**: new Playwright config, an e2e spec, and an npm script that prepares the throwaway
   e2e database. `npm run verify` stays lint + typecheck + unit tests, so the e2e suite does not
-  slow the inner loop.
+  slow the inner loop. The suite also picks up two guards deferred here from `harden-kanban-board`,
+  because neither can be expressed in jsdom: that the board reads per request rather than at build
+  time, and that the column count is announced in the accessibility tree.
 - **Docs**: `spec.md` MVP item 3 becomes implemented, and the Definition of Done's e2e
   requirement is met.

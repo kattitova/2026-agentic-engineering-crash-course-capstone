@@ -24,6 +24,17 @@ only shown.
 - **WHEN** a card is moved from Applied to Interview
 - **THEN** the Applied count decreases by one and the Interview count increases by one
 
+#### Scenario: A card cannot be moved again while its move is being stored
+
+- **WHEN** a card has been moved and that move has not finished being stored
+- **THEN** that card cannot be moved again until it has, so two moves of one card cannot settle
+  out of the order they were made in
+
+#### Scenario: Other cards stay movable
+
+- **WHEN** one card's move is being stored
+- **THEN** every other card on the board can still be moved
+
 ### Requirement: The first move into Applied records the application date
 
 The first time an application's status becomes Applied, the system SHALL record the date it was
@@ -56,21 +67,30 @@ cancelled or misjudged drag cannot restart the "time in this status" clock.
 - **WHEN** a drag is started and then cancelled without dropping on a column
 - **THEN** the card returns to its column and the application is unchanged
 
-### Requirement: A failed move returns the card and reports the failure
+### Requirement: A failed move reports the failure and leaves the board truthful
 
-When storing the new status fails, the board SHALL return the card to the column it came from
-and SHALL tell the person that the move did not happen. The board SHALL NOT keep showing a
-position that the stored data does not have.
+When storing the new status fails, the board SHALL tell the person that the move did not happen,
+and SHALL NOT keep showing a position that the stored data does not have. Where the application
+still exists, the card SHALL return to the column it came from. Where the application no longer
+exists, the card SHALL NOT be restored, because no column is the truthful one for an application
+that is gone.
 
 #### Scenario: The write fails
 
-- **WHEN** a card is moved to another column and storing the new status fails
+- **WHEN** a card is moved to another column and storing the new status fails while the
+  application still exists
 - **THEN** the card returns to its original column and a failure message is shown
 
 #### Scenario: The board stays truthful after a failure
 
 - **WHEN** a move has failed and the board is reloaded
 - **THEN** the card is in the column it occupied before the failed move
+
+#### Scenario: The application was deleted while the move was in flight
+
+- **WHEN** a card is moved and the application is found to no longer exist
+- **THEN** a failure message is shown and the card is not left on the board, without the person
+  having to reload
 
 ### Requirement: A card can be moved with the keyboard
 
@@ -82,6 +102,13 @@ as a pointer drag.
 
 - **WHEN** a card is focused with the keyboard and moved to the next column using the keyboard
 - **THEN** the application's status changes exactly as it would after a pointer drag
+
+#### Scenario: One key press moves one column
+
+- **WHEN** a card has been picked up with the keyboard and the key for the next column is pressed
+  once
+- **THEN** the card is over the adjacent column in funnel order, whatever the width of the
+  columns
 
 #### Scenario: Card is reachable
 

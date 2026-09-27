@@ -23,10 +23,10 @@ fix → review → fix loop: a decision recorded here is closed.
 | Finding | Severity | Deferred to | Reason |
 | --- | --- | --- | --- |
 | 2026-09-21 §3/§5 — no maximum field lengths on `company`, `position`, `link`, `notes` | Major | `add-application` | The form is where `maxLength` belongs and where validation first meets a user. No gap open today: `createApplication` and `updateApplication` have no caller, so the only write paths are `prisma/seed.ts` and the tests. The layout half of the finding was **not** deferred — it is fixed. |
-| 2026-09-21 §3 — concurrent-drag rule (two fast drags of the same card) | Note | `add-drag-and-drop` | A design decision for that change, not a defect in shipped code. |
-| 2026-09-21 §6 — `KeyboardSensor` not wired | Note | `add-drag-and-drop` | Same: the interaction does not exist yet. |
-| 2026-09-27 §3 — what a `NOT_FOUND` failure should do to the board mid-move | Note | `add-drag-and-drop` | Belongs to the change that introduces the move. |
-| 2026-09-27 §3 — dnd-kit's default arrow-key step (25px) will not reach the next column | Note | `add-drag-and-drop` | Needs a custom `coordinateGetter`; a design item for that change. |
+| 2026-09-21 §3 — concurrent-drag rule (two fast drags of the same card) | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: decided in that change's design — a card with a write in flight has its handle disabled; other cards stay draggable. Closed. |
+| 2026-09-21 §6 — `KeyboardSensor` not wired | Note | `add-drag-and-drop` | Same: the interaction does not exist yet. Sharpened 2026-09-27 — registering the sensor is not sufficient; see the `coordinateGetter` row below. |
+| 2026-09-27 §3 — what a `NOT_FOUND` failure should do to the board mid-move | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: the action revalidates on its `NOT_FOUND` branch, so a deleted card is not restored. Spec scenario added. Closed. |
+| 2026-09-27 §3 — dnd-kit's default arrow-key step (25px) will not reach the next column | Note | `add-drag-and-drop` | **Cashed in 2026-09-27**: `KeyboardSensor` takes a column-aware `coordinateGetter`; task 2.1a and a spec scenario pin one press to one column. Closed. |
 | 2026-09-21 §2 — commit the proposal before implementation | Minor | `add-drag-and-drop` | Applies to that change's history, not to work already done. |
 | 2026-09-27 §4 — "read per request, not per build" has no automated guard | Major | `add-drag-and-drop` | The behavioural check is "a row inserted directly into the database appears on reload", which is an e2e check and lands with the Playwright suite. A source-inspecting unit test would pass against a misplaced call; a build-output assertion would put `next build` inside `npm run verify`. Both rejected with reasons in the change's design. Until then the requirement rests on a recorded manual check. |
 
