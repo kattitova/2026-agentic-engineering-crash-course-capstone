@@ -21,6 +21,6 @@ their verdicts are retrofitted from their findings.
 - [2026-09-27 — harden-kanban-board](reviews/2026-09-27-harden-kanban-board.md) — CHANGES REQUESTED, retrofitted (0 critical, 2 major, 10 minor); the 2026-09-21 count-label fix found ineffective rather than absent
 - [2026-09-27 — disposition of the second review pass](reviews/2026-09-27-harden-kanban-board-disposition.md) — author
 - [2026-09-27 — harden-kanban-board (re-review)](reviews/2026-09-27-harden-kanban-board-re-review.md) — PASS WITH NOTES (0 critical, 0 major, 2 minor carried forward)
-- [2026-09-27 — add-drag-and-drop](reviews/2026-09-27-add-drag-and-drop.md) — CHANGES REQUESTED (0 critical, 3 major, 3 minor)
 - [2026-09-27 — add-drag-and-drop](reviews/2026-09-27-add-drag-and-drop.md) — CHANGES REQUESTED (0 critical, 3 major, 3 minor); all three major fixed, see the disposition below
 - [2026-09-27 — disposition of the add-drag-and-drop review](reviews/2026-09-27-add-drag-and-drop-disposition.md) — author; 3 major + 2 minor resolved, 1 minor carried with a reason
+- [2026-09-28 — add-drag-and-drop (re-review)](reviews/2026-09-28-add-drag-and-drop-re-review.md) — PASS WITH NOTES (0 critical, 0 major, 1 minor carried forward)
