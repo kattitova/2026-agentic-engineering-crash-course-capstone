@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import type { ActionResult, ActionState } from "@/lib/applications/action-result";
 import { APPLICATION_LIMITS, type ValidationErrors } from "@/lib/applications/validation";
@@ -83,6 +83,7 @@ const EMPTY: Values = { company: "", position: "", link: "", notes: "" };
 
 export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProps) {
   const [values, setValues] = useState<Values>(EMPTY);
+  const formRef = useRef<HTMLFormElement>(null);
   const set = (name: keyof Values) => (value: string) =>
     setValues((current) => ({ ...current, [name]: value }));
 
@@ -94,9 +95,20 @@ export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProp
   // `state` is a fresh object per submission, so this fires once per result and
   // not again on an unrelated re-render.
   useEffect(() => {
-    if (state?.ok) {
-      onSuccess?.(state.data);
+    if (!state) {
+      return;
     }
+    if (state.ok) {
+      onSuccess?.(state.data);
+      return;
+    }
+    // Moving focus is what makes the message reach someone who is not looking
+    // at the screen: the field is announced with its description, which
+    // aria-describedby alone would not be until they happened to tab back to
+    // it. The first in document order, which is the first one they would reach
+    // on their own.
+    const firstAtFault = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+    firstAtFault?.focus();
   }, [state, onSuccess]);
 
   const fieldErrors: ValidationErrors = (state && !state.ok && state.fieldErrors) || {};
@@ -106,7 +118,7 @@ export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProp
     state && !state.ok && Object.keys(fieldErrors).length === 0 ? state.error : null;
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-4">
       {formError ? (
         <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
           {formError}

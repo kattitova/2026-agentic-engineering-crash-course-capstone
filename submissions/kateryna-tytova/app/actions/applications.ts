@@ -43,17 +43,28 @@ export async function createApplication(
  * `FormData.get` returns `string | File | null` and the values go through
  * untouched: `validateApplicationInput` already rejects a non-string, so
  * coercing here would add a second place that decides what counts as empty.
+ *
+ * A write that fails comes back as `{ ok: false, error }` with no field, which
+ * is the shape the form renders in its one alert region.
  */
 export async function createApplicationFromForm(
   _prevState: ActionState<JobApplication>,
   formData: FormData,
 ): Promise<ActionResult<JobApplication>> {
-  return createApplication({
-    company: formData.get("company"),
-    position: formData.get("position"),
-    link: formData.get("link"),
-    notes: formData.get("notes"),
-  });
+  try {
+    return await createApplication({
+      company: formData.get("company"),
+      position: formData.get("position"),
+      link: formData.get("link"),
+      notes: formData.get("notes"),
+    });
+  } catch {
+    // Caught here rather than in createApplication, which keeps its signature
+    // and its tests. An escaping error is not a failure the form can report:
+    // React rethrows it during render, app/error.tsx replaces the page, and
+    // everything typed goes with it.
+    return { ok: false, error: "The application was not added. Please try again." };
+  }
 }
 
 export async function updateApplicationStatus(
