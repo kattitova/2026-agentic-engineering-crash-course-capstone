@@ -127,3 +127,35 @@ describe("AddApplicationForm after a refusal", () => {
     expect(screen.getByLabelText(/notes/i)).toHaveValue("Referral");
   });
 });
+
+describe("AddApplicationForm announcing a refusal", () => {
+  it("moves focus to the first field at fault", async () => {
+    // aria-describedby alone is read when the field next gets focus, not when
+    // the message appears. Without moving focus, someone using a screen reader
+    // presses the button, hears nothing, and is not told the application was
+    // refused - so this is what makes the message reach them.
+    render(
+      <AddApplicationForm
+        action={refusing({
+          ok: false,
+          error: "Invalid application data",
+          fieldErrors: { position: "Position is required", link: "Link must be a valid http(s) URL" },
+        })}
+      />,
+    );
+
+    await submit({ company: "Acme", position: "   " });
+
+    // The first in document order, not the first key of the object.
+    expect(screen.getByLabelText(/position/i)).toHaveFocus();
+  });
+
+  it("leaves focus alone when the submission is accepted", async () => {
+    render(<AddApplicationForm action={refusing({ ok: true, data: {} as never })} />);
+
+    await submit({ company: "Acme", position: "Dev" });
+
+    expect(screen.getByLabelText(/position/i)).not.toHaveFocus();
+    expect(screen.getByLabelText(/company/i)).not.toHaveFocus();
+  });
+});
