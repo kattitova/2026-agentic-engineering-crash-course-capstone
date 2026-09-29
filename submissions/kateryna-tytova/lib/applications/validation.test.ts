@@ -113,3 +113,16 @@ describe("validateApplicationInput length limits", () => {
     expect(result).toMatchObject({ ok: true, data: { [field]: atMax } });
   });
 });
+
+describe("validateApplicationInput non-text values", () => {
+  it("rejects a File, which is what FormData yields for a file input", () => {
+    // The form-shaped action passes FormData values through without coercing
+    // them, so this is the check that catches a company that is not text.
+    const result = validateApplicationInput({
+      company: new File(["Acme"], "company.txt"),
+      position: "Dev",
+    });
+
+    expect(result).toEqual({ ok: false, errors: { company: "Company is required" } });
+  });
+});

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma, type JobApplication } from "@/app/generated/prisma/client";
-import type { ActionResult } from "@/lib/applications/action-result";
+import type { ActionResult, ActionState } from "@/lib/applications/action-result";
 import { isApplicationStatus, planStatusChange } from "@/lib/applications/status";
 import {
   validateApplicationInput,
@@ -35,6 +35,25 @@ export async function createApplication(
   const application = await prisma.jobApplication.create({ data: validation.data });
   revalidatePath(BOARD_PATH);
   return { ok: true, data: application };
+}
+
+/**
+ * The `useActionState` shape over `createApplication`.
+ *
+ * `FormData.get` returns `string | File | null` and the values go through
+ * untouched: `validateApplicationInput` already rejects a non-string, so
+ * coercing here would add a second place that decides what counts as empty.
+ */
+export async function createApplicationFromForm(
+  _prevState: ActionState<JobApplication>,
+  formData: FormData,
+): Promise<ActionResult<JobApplication>> {
+  return createApplication({
+    company: formData.get("company"),
+    position: formData.get("position"),
+    link: formData.get("link"),
+    notes: formData.get("notes"),
+  });
 }
 
 export async function updateApplicationStatus(
