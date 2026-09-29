@@ -95,6 +95,18 @@ describe("validateApplicationInput length limits", () => {
     expect(result.errors[field]).toContain(String(limit));
   });
 
+  it("measures the trimmed value, not the raw one", () => {
+    // The stored value is what has to fit, and trimming happens first. Checking
+    // the raw string would reject a paste that only looks too long.
+    const padded = `  ${"a".repeat(APPLICATION_LIMITS.company)}  `;
+    expect(padded.length).toBeGreaterThan(APPLICATION_LIMITS.company);
+
+    expect(validateApplicationInput({ ...valid, company: padded })).toMatchObject({
+      ok: true,
+      data: { company: "a".repeat(APPLICATION_LIMITS.company) },
+    });
+  });
+
   it.each(cases)("accepts a $field of exactly $limit", ({ field, atMax }) => {
     const result = validateApplicationInput({ ...valid, [field]: atMax });
 
