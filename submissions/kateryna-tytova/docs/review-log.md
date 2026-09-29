@@ -24,3 +24,4 @@ their verdicts are retrofitted from their findings.
 - [2026-09-27 — add-drag-and-drop](reviews/2026-09-27-add-drag-and-drop.md) — CHANGES REQUESTED (0 critical, 3 major, 3 minor); all three major fixed, see the disposition below
 - [2026-09-27 — disposition of the add-drag-and-drop review](reviews/2026-09-27-add-drag-and-drop-disposition.md) — author; 3 major + 2 minor resolved, 1 minor carried with a reason
 - [2026-09-28 — add-drag-and-drop (re-review)](reviews/2026-09-28-add-drag-and-drop-re-review.md) — PASS WITH NOTES (0 critical, 0 major, 1 minor carried forward)
+- [2026-09-29 — add-application](reviews/2026-09-29-add-application.md) — CHANGES REQUESTED (1 critical, 1 major, 1 minor)
