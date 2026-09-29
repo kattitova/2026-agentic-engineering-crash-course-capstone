@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import type { ActionResult, ActionState } from "@/lib/applications/action-result";
 import { APPLICATION_LIMITS, type ValidationErrors } from "@/lib/applications/validation";
@@ -15,6 +15,8 @@ export interface AddApplicationFormProps {
     prevState: ActionState<JobApplication>,
     formData: FormData,
   ) => Promise<ActionResult<JobApplication>>;
+  /** Called once per successful submission, so the dialog can close itself. */
+  onSuccess?: (application: JobApplication) => void;
 }
 
 const FIELD_CLASS =
@@ -59,11 +61,19 @@ function Field({ name, label, required, multiline, placeholder, error }: FieldPr
   );
 }
 
-export function AddApplicationForm({ action }: AddApplicationFormProps) {
+export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProps) {
   const [state, formAction, pending] = useActionState<ActionState<JobApplication>, FormData>(
     action,
     null,
   );
+
+  // `state` is a fresh object per submission, so this fires once per result and
+  // not again on an unrelated re-render.
+  useEffect(() => {
+    if (state?.ok) {
+      onSuccess?.(state.data);
+    }
+  }, [state, onSuccess]);
 
   const fieldErrors: ValidationErrors = (state && !state.ok && state.fieldErrors) || {};
   // Only when nothing points at a field: otherwise "Invalid application data"

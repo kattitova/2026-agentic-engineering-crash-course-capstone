@@ -36,13 +36,13 @@ history rather than asserted here. A red commit fails `npm run verify` by design
       then render `fieldErrors` that way and verify it passes
 - [x] 3.4 Write a failing test that an error with no field — the write failing outright — is shown
       in a single region above the form rather than beside a field (red step), then implement it
-- [ ] 3.5 Implement `AddApplicationDialog`: a trigger button and a native `<dialog>` opened with
+- [x] 3.5 Implement `AddApplicationDialog`: a trigger button and a native `<dialog>` opened with
       `showModal()`, closing on a successful result and staying open otherwise, and verify by hand
       in `npm run dev` that a submission adds a card and the dialog closes
-- [ ] 3.6 Replace the disabled button in `app/page.tsx` with the dialog's trigger, and verify the
+- [x] 3.6 Replace the disabled button in `app/page.tsx` with the dialog's trigger, and verify the
       page is still a Server Component — `next build` must keep reporting `/` as dynamic, not
       static
-- [ ] 3.7 Run `npm run verify` and confirm it passes
+- [x] 3.7 Run `npm run verify` and confirm it passes
 
 ## 4. E2E, in a real browser
 
