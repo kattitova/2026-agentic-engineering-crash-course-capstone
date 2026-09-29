@@ -25,10 +25,10 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 
 ## 3. The dialog and its form (TDD)
 
-- [ ] 3.1 Write `components/application-form/AddApplicationForm.test.tsx` asserting the form offers
+- [x] 3.1 Write `components/application-form/AddApplicationForm.test.tsx` asserting the form offers
       exactly the four fields, that company and position are marked required, and that no other
       input is present. Verify it fails because the component does not exist (red step)
-- [ ] 3.2 Implement `AddApplicationForm` as a client component using `useActionState` over
+- [x] 3.2 Implement `AddApplicationForm` as a client component using `useActionState` over
       `createApplicationFromForm`, with `maxLength` from `APPLICATION_LIMITS`, and verify the tests
       pass
 - [ ] 3.3 Write a failing test that a field error from the action is rendered next to its field,
