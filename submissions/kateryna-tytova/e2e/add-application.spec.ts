@@ -33,6 +33,15 @@ function storedCount(company: string): number {
   );
 }
 
+function storedRow(company: string): { link: string | null; notes: string | null } | undefined {
+  return withDatabase(
+    (db) =>
+      db.prepare("SELECT link, notes FROM JobApplication WHERE company = ?").get(company) as
+        | { link: string | null; notes: string | null }
+        | undefined,
+  );
+}
+
 test.beforeEach(() => {
   resetBoard();
 });
@@ -57,6 +66,29 @@ test("adds an application to the Wishlist column", async ({ page }) => {
   // The count is a separate rendering path from the cards, so it is worth
   // asserting rather than assuming.
   await expect(column(page, "Wishlist").getByText("2 applications")).toBeVisible();
+
+  // Left empty means stored as NULL, not as "". Only the database can say which,
+  // and the board renders both the same way.
+  expect(storedRow(COMPANY)).toEqual({ link: null, notes: null });
+});
+
+test("dismissing the form adds nothing and leaves the board alone", async ({ page }) => {
+  await page.goto("/");
+  await openDialog(page);
+  await page.getByLabel("Company").fill(COMPANY);
+  await page.getByLabel("Position").fill(POSITION);
+
+  await page.keyboard.press("Escape");
+
+  await expect(dialog(page)).toBeHidden();
+  expect(storedCount(COMPANY)).toBe(0);
+  await expect(column(page, "Wishlist").getByText("1 application")).toBeVisible();
+  await expect(page.getByText(COMPANY)).toHaveCount(0);
+
+  // Not only unstored but unshown after a reload, which is the difference
+  // between a card the board is holding optimistically and no card at all.
+  await page.reload();
+  await expect(page.getByText(COMPANY)).toHaveCount(0);
 });
 
 test("the application is stored, not only shown", async ({ page }) => {
@@ -96,6 +128,26 @@ test("refuses an application it cannot store and keeps what was typed", async ({
 
   expect(storedCount("   ")).toBe(0);
   expect(storedCount("")).toBe(0);
+
+  await page.reload();
+  await expect(column(page, "Wishlist").getByText(POSITION)).toHaveCount(0);
+  await expect(column(page, "Wishlist").getByText("1 application")).toBeVisible();
+});
+
+test("stores a note's line breaks as it received them", async ({ page }) => {
+  // Open question from the 2026-09-29 review: a textarea serialises line breaks
+  // as CRLF in a classic form submission, which would make a note count one
+  // character more per break than the textarea's own maxLength allows, and
+  // would store a carriage return. This is the measurement that answers it.
+  await page.goto("/");
+  await openDialog(page);
+  await page.getByLabel("Company").fill(COMPANY);
+  await page.getByLabel("Position").fill(POSITION);
+  await page.getByLabel("Notes").fill("first\nsecond");
+  await dialog(page).getByRole("button", { name: "Add application" }).click();
+  await expect(dialog(page)).toBeHidden();
+
+  expect(storedRow(COMPANY)?.notes).toBe("first\nsecond");
 });
 
 test("keeps focus inside the dialog and gives it back on Escape", async ({ page }) => {

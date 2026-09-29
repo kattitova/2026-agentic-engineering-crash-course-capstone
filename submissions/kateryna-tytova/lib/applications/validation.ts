@@ -31,11 +31,21 @@ export const APPLICATION_LIMITS = {
   notes: 2000,
 } as const satisfies Record<keyof ApplicationInput, number>;
 
+/**
+ * A textarea submits its line breaks as CRLF while its own `maxLength` counts
+ * each break as one character, so without this a note the field accepted at
+ * exactly the maximum arrives over it. Normalising also keeps one line ending
+ * in the database whatever submitted the value.
+ */
+function normaliseNewlines(value: string): string {
+  return value.replace(/\r\n?/g, "\n");
+}
+
 function requiredText(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
   }
-  const trimmed = value.trim();
+  const trimmed = normaliseNewlines(value).trim();
   return trimmed === "" ? null : trimmed;
 }
 
@@ -47,7 +57,7 @@ function optionalText(value: unknown): string | null | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  const trimmed = value.trim();
+  const trimmed = normaliseNewlines(value).trim();
   return trimmed === "" ? null : trimmed;
 }
 
