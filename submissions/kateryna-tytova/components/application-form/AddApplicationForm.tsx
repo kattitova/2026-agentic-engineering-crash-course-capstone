@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import type { ActionResult, ActionState } from "@/lib/applications/action-result";
 import { APPLICATION_LIMITS, type ValidationErrors } from "@/lib/applications/validation";
@@ -29,9 +29,20 @@ interface FieldProps {
   multiline?: boolean;
   placeholder?: string;
   error?: string;
+  value: string;
+  onChange: (value: string) => void;
 }
 
-function Field({ name, label, required, multiline, placeholder, error }: FieldProps) {
+function Field({
+  name,
+  label,
+  required,
+  multiline,
+  placeholder,
+  error,
+  value,
+  onChange,
+}: FieldProps) {
   const errorId = `${name}-error`;
   // Tied to the field rather than merely placed next to it, so assistive
   // technology reads the message as part of the field and not as loose text.
@@ -44,6 +55,11 @@ function Field({ name, label, required, multiline, placeholder, error }: FieldPr
     className: FIELD_CLASS,
     "aria-invalid": error ? (true as const) : undefined,
     "aria-describedby": error ? errorId : undefined,
+    // Controlled, because React resets an uncontrolled form as soon as its
+    // action resolves - which on a refusal would throw away the submission the
+    // person is being asked to correct.
+    value,
+    onChange: (event: { target: { value: string } }) => onChange(event.target.value),
   };
 
   return (
@@ -61,7 +77,15 @@ function Field({ name, label, required, multiline, placeholder, error }: FieldPr
   );
 }
 
+type Values = Record<keyof ValidationErrors, string>;
+
+const EMPTY: Values = { company: "", position: "", link: "", notes: "" };
+
 export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProps) {
+  const [values, setValues] = useState<Values>(EMPTY);
+  const set = (name: keyof Values) => (value: string) =>
+    setValues((current) => ({ ...current, [name]: value }));
+
   const [state, formAction, pending] = useActionState<ActionState<JobApplication>, FormData>(
     action,
     null,
@@ -89,13 +113,41 @@ export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProp
         </p>
       ) : null}
 
-      <Field name="company" label="Company" required error={fieldErrors.company} />
-      <Field name="position" label="Position" required error={fieldErrors.position} />
+      <Field
+        name="company"
+        label="Company"
+        required
+        error={fieldErrors.company}
+        value={values.company}
+        onChange={set("company")}
+      />
+      <Field
+        name="position"
+        label="Position"
+        required
+        error={fieldErrors.position}
+        value={values.position}
+        onChange={set("position")}
+      />
       {/* type="text", not "url": the browser's own URL check would refuse the
           value before the action runs, so the message would not be ours and
           would not name the field the way the rest of the form does. */}
-      <Field name="link" label="Link" placeholder="https://" error={fieldErrors.link} />
-      <Field name="notes" label="Notes" multiline error={fieldErrors.notes} />
+      <Field
+        name="link"
+        label="Link"
+        placeholder="https://"
+        error={fieldErrors.link}
+        value={values.link}
+        onChange={set("link")}
+      />
+      <Field
+        name="notes"
+        label="Notes"
+        multiline
+        error={fieldErrors.notes}
+        value={values.notes}
+        onChange={set("notes")}
+      />
 
       <button
         type="submit"
