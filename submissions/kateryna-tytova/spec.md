@@ -30,15 +30,20 @@ overall progress of the job search is visible at a glance.
 | Field       | Type                                                        | Notes                                    |
 | ----------- | ----------------------------------------------------------- | ---------------------------------------- |
 | id          | string (cuid)                                               | auto-generated                           |
-| company     | string                                                      | required                                 |
-| position    | string                                                      | required                                 |
+| company     | string                                                      | required; at most 120 characters         |
+| position    | string                                                      | required; at most 120 characters         |
 | status      | enum: WISHLIST \| APPLIED \| INTERVIEW \| OFFER \| REJECTED | defaults to WISHLIST                     |
-| link        | string?                                                     | link to the job posting                  |
-| notes       | string?                                                     | free text                                |
+| link        | string?                                                     | link to the job posting; http(s) only, at most 2048 characters |
+| notes       | string?                                                     | free text; at most 2000 characters       |
 | appliedDate | DateTime?                                                   | set on the first transition into APPLIED |
 | statusChangedAt | DateTime                                                | defaults to now(); updated only when `status` changes |
 | createdAt   | DateTime                                                    | auto                                     |
 | updatedAt   | DateTime                                                    | auto                                     |
+
+The lengths are measured after trimming and enforced in
+`validateApplicationInput` (`APPLICATION_LIMITS`), not in `prisma/schema.prisma`:
+SQLite ignores the length on a `VARCHAR(n)`, so a schema-level limit would state
+a constraint the database does not apply.
 
 ## MVP scope (in)
 
@@ -135,3 +140,19 @@ plan, and why. Empty is fine on Day 0.)_
   This also satisfies the Definition of Done's e2e requirement: the Playwright
   suite moves a card with the keyboard and asserts the move survives a reload,
   at both a single-row and a wrapped viewport.
+
+- **2026-09-29 — MVP item 2 is implemented; the placeholder button is now real.**
+  The "Add application" button opens a modal dialog over the board with the four
+  fields this spec names. A new application starts in WISHLIST; there is no
+  status picker, because moving the card is what drag-and-drop is for. This
+  closes the 2026-09-27 note above: the disabled control is gone and the change
+  it was waiting for has landed.
+
+- **2026-09-29 — every stored field has a maximum length.** company and position
+  at 120 characters, link at 2048 (the conventional URL ceiling), notes at 2000.
+  Recorded in the data model above. The limits live in `validateApplicationInput`
+  because both write paths already share it, and because the form's `maxLength`
+  attributes are a convenience rather than the guard - they do not exist for
+  `prisma/seed.ts` or a direct call. This resolves the last unresolved Major from
+  the 2026-09-21 review, which was deferred to this change on the grounds that no
+  gap was open while `createApplication` had no caller.

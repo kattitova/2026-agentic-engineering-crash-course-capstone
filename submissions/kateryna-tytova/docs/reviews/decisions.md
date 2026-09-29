@@ -93,3 +93,19 @@ Two notes the author is carrying forward rather than closing silently, both reco
   one**: Testing Library normalises whitespace across text nodes, and the failure mode was JSX
   emitting three text nodes instead of one. The browser probe is the evidence. This is the same
   class as the deferred §4 guard above and lands with the same Playwright suite.
+
+## 2026-09-29 — what `add-application` settled
+
+| Finding | Where it stood | Now |
+| --- | --- | --- |
+| 2026-09-21 §3/§5 — no maximum field lengths on `company`, `position`, `link`, `notes` | Deferred to `add-application` | **Resolved.** `APPLICATION_LIMITS` (120/120/2048/2000) is enforced in `validateApplicationInput` against the trimmed value, with a test per field at the maximum and one character over, and a test that the raw length is not what is measured. Recorded in the `spec.md` data model and change log. |
+| 2026-09-21 §1 / Open question 1 — disabled "Add application" button has no requirement behind it | Kept for design fidelity until MVP item 2 | **Resolved.** The placeholder is gone; the header now holds the dialog's trigger, and the `application-form` capability is the requirement behind it. |
+
+No deferral now points at `add-application`.
+
+`R20260927-6` (the clamp/wrap assertions match class substrings) stays **open**. Its note offered
+`add-application` as a place to decide it, and this change did not take it up: it belongs to the
+board's rendering, not to the form, and folding a rendered-height assertion into a change about
+adding an application would be scope this change's proposal does not carry. Recorded here so the
+next reviewer sees a decision rather than a silence — it needs its own change, or an explicit
+written acceptance of the limit.

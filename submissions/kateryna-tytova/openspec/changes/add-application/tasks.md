@@ -65,12 +65,12 @@ and no `::backdrop`.
 
 ## 5. Documentation and final verification
 
-- [ ] 5.1 Record the four limits in the `spec.md` data model table, and verify the numbers match
+- [x] 5.1 Record the four limits in the `spec.md` data model table, and verify the numbers match
       `APPLICATION_LIMITS` exactly rather than being restated by hand
-- [ ] 5.2 Add a `spec.md` Spec change log entry recording MVP item 2 as implemented and the
+- [x] 5.2 Add a `spec.md` Spec change log entry recording MVP item 2 as implemented and the
       placeholder "Add application" button as now real, and verify it closes the note the
       board's change left open
-- [ ] 5.3 Append to `docs/reviews/decisions.md` that the deferred field-length finding is now
+- [x] 5.3 Append to `docs/reviews/decisions.md` that the deferred field-length finding is now
       resolved here, and verify no deferral in the ledger still points at this change
-- [ ] 5.4 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
+- [x] 5.4 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
       change complete

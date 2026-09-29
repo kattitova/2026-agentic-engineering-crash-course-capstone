@@ -33,10 +33,10 @@ export function resetBoard(): void {
 }
 
 /** Opens the shared e2e database for a test that needs to assert on rows. */
-export function withDatabase<T>(use: (db: Database.Database) => T): T {
+export function withDatabase<T>(query: (db: Database.Database) => T): T {
   const db = new Database(E2E_DB);
   try {
-    return use(db);
+    return query(db);
   } finally {
     db.close();
   }
