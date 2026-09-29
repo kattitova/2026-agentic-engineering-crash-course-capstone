@@ -1,34 +1,5 @@
-import Database from "better-sqlite3";
 import { expect, test, type Page } from "@playwright/test";
-
-const E2E_DB = "e2e.db";
-
-/** The statuses `npm run e2e:db` leaves behind. */
-const SEEDED = {
-  "e2e-wishlist": "WISHLIST",
-  "e2e-applied": "APPLIED",
-  "e2e-interview": "INTERVIEW",
-} as const;
-
-/**
- * Puts the seeded rows back where the seeder left them, without resetting the
- * schema. Each test mutates the one shared database, so without this the order
- * of the tests would decide whether they pass.
- */
-function resetBoard(): void {
-  const db = new Database(E2E_DB);
-  try {
-    const update = db.prepare("UPDATE JobApplication SET status = ? WHERE id = ?");
-    for (const [id, status] of Object.entries(SEEDED)) {
-      update.run(status, id);
-    }
-    db.prepare("DELETE FROM JobApplication WHERE id NOT IN (?, ?, ?)").run(
-      ...Object.keys(SEEDED),
-    );
-  } finally {
-    db.close();
-  }
-}
+import { resetBoard, withDatabase } from "./reset-board";
 
 /**
  * Waits until the board can actually be driven.
@@ -140,17 +111,14 @@ test("reads the data per request, not at build time", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("Inserted Behind The Board")).toHaveCount(0);
 
-  const db = new Database(E2E_DB);
-  try {
+  withDatabase((db) => {
     const now = Date.now();
     db.prepare(
       `INSERT INTO JobApplication
          (id, company, position, status, link, notes, appliedDate, statusChangedAt, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
     ).run("e2e-direct", "Inserted Behind The Board", "Reliability Engineer", "OFFER", now, now, now);
-  } finally {
-    db.close();
-  }
+  });
 
   await page.reload();
 

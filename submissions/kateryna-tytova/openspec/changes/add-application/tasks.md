@@ -49,19 +49,19 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 These four cannot be asserted in jsdom: it implements `<dialog>` only partly, with no focus trap
 and no `::backdrop`.
 
-- [ ] 4.1 Add `e2e/add-application.spec.ts` that opens the dialog, fills company and position, and
+- [x] 4.1 Add `e2e/add-application.spec.ts` that opens the dialog, fills company and position, and
       verifies a card appears in the Wishlist column and the Wishlist count increases by one
-- [ ] 4.2 Extend it to reload the page and verify the application is still there, so the test
+- [x] 4.2 Extend it to reload the page and verify the application is still there, so the test
       distinguishes stored from merely shown
-- [ ] 4.3 Add a check that submitting with an empty company stores nothing, keeps the dialog open,
+- [x] 4.3 Add a check that submitting with an empty company stores nothing, keeps the dialog open,
       and leaves the position field's value in place
-- [ ] 4.4 Add a check that focus stays inside the open dialog when tabbing past its last control,
+- [x] 4.4 Add a check that focus stays inside the open dialog when tabbing past its last control,
       and returns to the trigger after `Escape`, and verify it fails if the dialog is opened with
       `show()` instead of `showModal()` — the assertion has to distinguish the two
-- [ ] 4.5 Extend `e2e/move-card.spec.ts`'s reset helper, or the e2e seeder, so a run that adds an
+- [x] 4.5 Extend `e2e/move-card.spec.ts`'s reset helper, or the e2e seeder, so a run that adds an
       application leaves the database as it found it, and verify the suite passes twice in a row
       from an already-seeded database
-- [ ] 4.6 Run `npm run test:e2e` and confirm both the wide and wrapped projects pass
+- [x] 4.6 Run `npm run test:e2e` and confirm both the wide and wrapped projects pass
 
 ## 5. Documentation and final verification
 
