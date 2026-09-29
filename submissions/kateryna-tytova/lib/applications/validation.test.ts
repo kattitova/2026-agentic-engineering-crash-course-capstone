@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateApplicationInput } from "./validation";
+import { APPLICATION_LIMITS, validateApplicationInput } from "./validation";
 
 describe("validateApplicationInput", () => {
   it("accepts required fields and trims them", () => {
@@ -67,5 +67,37 @@ describe("validateApplicationInput", () => {
   it("rejects non-string values", () => {
     const result = validateApplicationInput({ company: 42, position: ["Dev"] });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("validateApplicationInput length limits", () => {
+  // A link has to stay a valid http(s) URL while it grows, or the length case
+  // would be indistinguishable from the URL case.
+  const linkOfLength = (length: number) =>
+    `https://example.com/${"a".repeat(length - "https://example.com/".length)}`;
+
+  const cases = [
+    { field: "company", limit: APPLICATION_LIMITS.company, atMax: "a".repeat(APPLICATION_LIMITS.company) },
+    { field: "position", limit: APPLICATION_LIMITS.position, atMax: "a".repeat(APPLICATION_LIMITS.position) },
+    { field: "link", limit: APPLICATION_LIMITS.link, atMax: linkOfLength(APPLICATION_LIMITS.link) },
+    { field: "notes", limit: APPLICATION_LIMITS.notes, atMax: "a".repeat(APPLICATION_LIMITS.notes) },
+  ] as const;
+
+  const valid = { company: "Acme", position: "Dev" };
+
+  it.each(cases)("rejects a $field one character over $limit", ({ field, limit, atMax }) => {
+    const overMax = field === "link" ? linkOfLength(limit + 1) : `${atMax}a`;
+    const result = validateApplicationInput({ ...valid, [field]: overMax });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors[field]).toMatch(new RegExp(`${field}`, "i"));
+    expect(result.errors[field]).toContain(String(limit));
+  });
+
+  it.each(cases)("accepts a $field of exactly $limit", ({ field, atMax }) => {
+    const result = validateApplicationInput({ ...valid, [field]: atMax });
+
+    expect(result).toMatchObject({ ok: true, data: { [field]: atMax } });
   });
 });
