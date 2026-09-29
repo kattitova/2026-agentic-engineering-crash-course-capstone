@@ -100,3 +100,30 @@ describe("AddApplicationForm refusals", () => {
     }
   });
 });
+
+describe("AddApplicationForm after a refusal", () => {
+  it("keeps every value the person typed", async () => {
+    // React resets an uncontrolled form once its action resolves, which would
+    // throw away the whole submission on a refusal. This is the guard for that.
+    render(
+      <AddApplicationForm
+        action={refusing({
+          ok: false,
+          error: "Invalid application data",
+          fieldErrors: { company: "Company is required" },
+        })}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/link/i), {
+      target: { value: "https://jobs.example.com/1" },
+    });
+    fireEvent.change(screen.getByLabelText(/notes/i), { target: { value: "Referral" } });
+    await submit({ company: "   ", position: "Platform Engineer" });
+
+    expect(screen.getByLabelText(/company/i)).toHaveValue("   ");
+    expect(screen.getByLabelText(/position/i)).toHaveValue("Platform Engineer");
+    expect(screen.getByLabelText(/link/i)).toHaveValue("https://jobs.example.com/1");
+    expect(screen.getByLabelText(/notes/i)).toHaveValue("Referral");
+  });
+});
