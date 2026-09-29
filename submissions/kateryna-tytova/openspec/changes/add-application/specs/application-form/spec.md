@@ -101,6 +101,12 @@ only in the form, because the form is not the only way a value can reach validat
 - **WHEN** the form is submitted with a company of exactly the maximum length
 - **THEN** the application is stored
 
+#### Scenario: A line break costs one character
+
+- **WHEN** the form is submitted with notes at exactly the maximum length that contain line breaks
+- **THEN** the application is stored, and each line break counts as the single character the field
+  showed the person while they typed it
+
 ### Requirement: A failed write is reported and loses nothing
 
 When storing the application fails for a reason the person cannot see — the database is

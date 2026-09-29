@@ -93,9 +93,15 @@ simplest correct answer.
 `useActionState` returns the last result. When it turns `ok`, the dialog closes and the form
 resets; on failure it stays open with everything typed still in the fields.
 
-Keeping the values is not extra work but the absence of it: an uncontrolled form whose DOM nodes
-are never unmounted keeps what was typed. The mistake to avoid is closing the dialog first and
-reopening it on failure, which is what loses the input.
+Keeping the values **is** extra work, which this design originally got wrong. The assumption was
+that an uncontrolled form whose DOM nodes are never unmounted keeps what was typed. It does not:
+React resets a form as soon as the action driving it resolves, so every refusal emptied all four
+fields. The fields are therefore controlled, backed by one `useState` object. An e2e run found
+this before any reviewer did; the jsdom test written afterwards fails if they go back to being
+uncontrolled.
+
+The other mistake to avoid is closing the dialog first and reopening it on failure, which loses
+the input for a different reason.
 
 ### Errors are rendered per field, from `fieldErrors`
 
@@ -104,6 +110,30 @@ one, so a screen reader reads the message as part of that field. A message with 
 write failing outright — goes to one region above the form.
 
 This is the shape `ActionResult` was given on day one and never used; it needs no new convention.
+
+`aria-describedby` alone is not enough, which the first review pass caught: it is read when a field
+next receives focus, not when its message appears, so a refusal was silent for anyone not watching
+the screen. A refusal therefore moves focus to the first field at fault in document order — the
+first one they would have reached themselves.
+
+### A failed write is caught in the wrapper, not in `createApplication`
+
+`createApplicationFromForm` wraps the call in `try`/`catch` and returns `{ ok: false, error }` with
+no field, which is exactly the shape the alert region above the form renders.
+
+It has to be caught somewhere, because an error that escapes is not a failure the form can report
+at all: React rethrows a rejected action during render, the nearest boundary is `app/error.tsx`,
+and it replaces the whole page — the dialog, the typed values and an accurate account of what
+happened all go at once, under a message about a failed *read*. Catching in the wrapper rather than
+in `createApplication` keeps that action's signature and its tests untouched, which is a goal above.
+
+### Line endings are normalised before the length is measured
+
+A textarea submits its line breaks as CRLF while its own `maxLength` counts each break as one
+character. Measured in Chromium, not assumed: a note reached the database with carriage returns.
+`validateApplicationInput` normalises CRLF to LF before trimming, so a note the field accepted at
+exactly 2000 characters is not refused by a message that contradicts what is on screen, and one
+line ending reaches the database whatever submitted the value.
 
 ## Risks / Trade-offs
 

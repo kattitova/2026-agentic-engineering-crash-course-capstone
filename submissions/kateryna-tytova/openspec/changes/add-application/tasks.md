@@ -74,3 +74,16 @@ and no `::backdrop`.
       resolved here, and verify no deferral in the ledger still points at this change
 - [x] 5.4 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
       change complete
+
+## 6. Review follow-ups (2026-09-29)
+
+- [x] 6.1 `R20260929-1` (Critical) — catch a failed write in `createApplicationFromForm` and return
+      `{ ok: false, error }`, verified by a red test that first reproduced the error escaping past
+      the form
+- [x] 6.2 `R20260929-2` (Major) — move focus to the first field at fault on a refusal, so the
+      message is announced rather than waiting to be tabbed back to
+- [x] 6.3 Open question 1 — measure what a textarea's line breaks reach the database as, and
+      normalise CRLF before the length is measured
+- [x] 6.4 Close the four scenario gaps the OpenSpec verification named: dismissal stores nothing,
+      a refusal shows nothing after a reload, optional fields are stored as NULL, and `design.md`
+      no longer describes an uncontrolled form

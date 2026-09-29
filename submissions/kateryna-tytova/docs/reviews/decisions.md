@@ -109,3 +109,17 @@ board's rendering, not to the form, and folding a rendered-height assertion into
 adding an application would be scope this change's proposal does not carry. Recorded here so the
 next reviewer sees a decision rather than a silence — it needs its own change, or an explicit
 written acceptance of the limit.
+
+## 2026-09-29 — `add-application` review findings
+
+| Finding | Severity | Resolution |
+| --- | --- | --- |
+| `R20260929-1` — a failed write escaped `createApplicationFromForm`, so React rethrew it during render and `app/error.tsx` replaced the page: the dialog, the typed values and an accurate account of the failure all went at once, under a message about a failed *read* | Critical | **Fixed.** Reproduced first (`components/application-form/probe`, then the committed red test in `app/actions/applications.test.ts`), then caught in the wrapper so `createApplication` keeps its signature and tests. The alert region built for this case is now reachable. |
+| `R20260929-2` — a server-side refusal was announced to nobody: `aria-describedby` is read when a field next receives focus, not when its message appears | Major | **Fixed.** A refusal moves focus to the first field at fault in document order. Pinned by a test that also checks focus is left alone on success. |
+| `R20260929-3` — commit `012436e` has no scope and bundles an e2e helper rename into a docs commit | Minor | **Accepted, not rewritten.** The finding is correct. History is left as it is rather than rewritten after review; the follow-up commits carry scopes and keep renames out of docs commits. |
+| Open question 1 — do a textarea's line breaks arrive as CRLF? | — | **Measured, and it was a defect.** Chromium stored `\r\n`, so a note the field accepted at exactly 2000 characters reached the validator at 2000 + one per break and was refused by a message contradicting the screen. `validateApplicationInput` now normalises CRLF before trimming. A scenario was added to the change's delta spec, which was still ACTIVE. |
+| Open question 2 — Cancel and Escape stay active while a submission is in flight | — | **Open, put to the author.** Dismissing unmounts the form but does not cancel the action, so the application is still stored and appears on the board after the person has "cancelled". Not decided unilaterally: blocking Escape in a modal has its own accessibility cost. |
+
+The OpenSpec verification pass raised no critical items and four smaller ones; all four are closed —
+`design.md`'s uncontrolled-form paragraph corrected, and e2e checks added for dismissal, for nothing
+being shown that was not stored, and for the optional fields being stored as NULL.
