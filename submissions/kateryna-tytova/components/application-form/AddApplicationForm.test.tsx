@@ -25,7 +25,13 @@ function refusing(result: ActionResult<JobApplication>) {
  * the action runs, resolves, and the state it returns is rendered. `act` waits
  * for that so the assertions do not race it.
  */
-async function submit() {
+async function submit(values: { company: string; position: string }) {
+  // jsdom enforces `required` on submit, so the required fields have to hold
+  // something or the action never runs at all. Whitespace satisfies the
+  // browser and is refused by the validator, which is the case worth having.
+  fireEvent.change(screen.getByLabelText(/company/i), { target: { value: values.company } });
+  fireEvent.change(screen.getByLabelText(/position/i), { target: { value: values.position } });
+
   const button = screen.getByRole("button", { name: /add application/i });
   await act(async () => {
     fireEvent.click(button);
@@ -68,7 +74,7 @@ describe("AddApplicationForm refusals", () => {
       />,
     );
 
-    await submit();
+    await submit({ company: "   ", position: "Dev" });
 
     const company = await screen.findByLabelText(/company/i);
     // The description, not merely the text being on screen: a message rendered
@@ -86,7 +92,7 @@ describe("AddApplicationForm refusals", () => {
       <AddApplicationForm action={refusing({ ok: false, error: "Could not add the application" })} />,
     );
 
-    await submit();
+    await submit({ company: "Acme", position: "Dev" });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not add the application");
     for (const label of [/company/i, /position/i, /link/i, /notes/i]) {

@@ -31,10 +31,10 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 - [x] 3.2 Implement `AddApplicationForm` as a client component using `useActionState` over
       `createApplicationFromForm`, with `maxLength` from `APPLICATION_LIMITS`, and verify the tests
       pass
-- [ ] 3.3 Write a failing test that a field error from the action is rendered next to its field,
+- [x] 3.3 Write a failing test that a field error from the action is rendered next to its field,
       tied to it by `aria-describedby`, and that the field is marked `aria-invalid` (red step);
       then render `fieldErrors` that way and verify it passes
-- [ ] 3.4 Write a failing test that an error with no field — the write failing outright — is shown
+- [x] 3.4 Write a failing test that an error with no field — the write failing outright — is shown
       in a single region above the form rather than beside a field (red step), then implement it
 - [ ] 3.5 Implement `AddApplicationDialog`: a trigger button and a native `<dialog>` opened with
       `showModal()`, closing on a successful result and staying open otherwise, and verify by hand
