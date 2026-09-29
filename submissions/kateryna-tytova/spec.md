@@ -156,3 +156,11 @@ plan, and why. Empty is fine on Day 0.)_
   `prisma/seed.ts` or a direct call. This resolves the last unresolved Major from
   the 2026-09-21 review, which was deferred to this change on the grounds that no
   gap was open while `createApplication` had no caller.
+
+- **2026-09-29 — dismissing the add form during submission does not undo it.** A review pass asked
+  whether Cancel and Escape should be blocked while a submission is in flight. They are not.
+  Closing the dialog unmounts the form but does not cancel the server action, so an application
+  submitted and then "cancelled" is still stored and appears on the board. Recorded rather than
+  fixed: the window is milliseconds against a local SQLite file, and keeping Escape working is
+  worth more than closing it — a modal that will not close on Escape is its own accessibility
+  problem. Undoing a write needs delete, which is MVP item 4.

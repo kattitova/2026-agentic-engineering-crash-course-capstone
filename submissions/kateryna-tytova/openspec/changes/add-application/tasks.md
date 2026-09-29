@@ -87,3 +87,5 @@ and no `::backdrop`.
 - [x] 6.4 Close the four scenario gaps the OpenSpec verification named: dismissal stores nothing,
       a refusal shows nothing after a reload, optional fields are stored as NULL, and `design.md`
       no longer describes an uncontrolled form
+- [x] 6.5 Open question 2 — record dismissal during a pending submission as an accepted limitation
+      in the `spec.md` Spec change log, rather than blocking Escape in a modal
