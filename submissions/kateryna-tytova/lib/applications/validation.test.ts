@@ -126,3 +126,35 @@ describe("validateApplicationInput non-text values", () => {
     expect(result).toEqual({ ok: false, errors: { company: "Company is required" } });
   });
 });
+
+describe("validateApplicationInput line endings", () => {
+  // A textarea serialises its line breaks as CRLF on submit, while its own
+  // maxLength counts each break as one character. Measured in a real browser
+  // (e2e/add-application.spec.ts): the note reached the database with a
+  // carriage return before the newline. Left alone, a note the textarea accepts
+  // at exactly the maximum arrives one character over per line break and is
+  // refused by a message that contradicts what the person is looking at.
+  it("stores a line break as one character, not two", () => {
+    const result = validateApplicationInput({
+      company: "Acme",
+      position: "Dev",
+      notes: "first\r\nsecond",
+    });
+
+    expect(result).toMatchObject({ ok: true, data: { notes: "first\nsecond" } });
+  });
+
+  it("accepts a note at the maximum that the textarea would have accepted", () => {
+    const typed = Array.from({ length: 11 }, () => "a").join("\n");
+    const asTyped = `${typed}${"b".repeat(APPLICATION_LIMITS.notes - typed.length)}`;
+    expect(asTyped.length).toBe(APPLICATION_LIMITS.notes);
+
+    const result = validateApplicationInput({
+      company: "Acme",
+      position: "Dev",
+      notes: asTyped.replace(/\n/g, "\r\n"),
+    });
+
+    expect(result.ok).toBe(true);
+  });
+});
