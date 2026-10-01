@@ -72,11 +72,9 @@ verify that the fix is effective (see hard rule 6 in the agent definition).
 
 ## Open — not yet decided
 
-One, carried deliberately.
-
-| Finding | Severity | Note |
-| --- | --- | --- |
-| `R20260927-6` — the clamp/wrap assertions match class substrings, so `line-clamp-3` → `line-clamp-1` passes | Minor | The deferral to Playwright was **not** honoured: the suite measures page overflow, not the clamp depth. The measured Chromium observation recorded in `harden-kanban-board` task 4.6 is still the only evidence. Decide in `add-application` or a later change — either add a rendered-height assertion or accept the limit in writing. |
+Nothing. `R20260927-6`, the last entry here, was closed on 2026-10-01 — see the section at the end of
+this file. The three error-boundary items listed as deferred there are recorded decisions, not
+undecided findings.
 
 Everything else from all four 2026-09-27 passes is closed above. The re-review
 (`reviews/2026-09-27-harden-kanban-board-re-review.md`) returned PASS WITH NOTES with no blocking
@@ -173,3 +171,41 @@ PASS WITH NOTES, no blocking follow-ups. All three Minor were correct.
 The reviewer declined to re-raise that this change's planning artifacts were committed after its code
 (`74c3e62`). Noted here anyway, because it is true and the 2026-09-21 §2 finding was about exactly
 that: the artifacts were written in explore mode before any code, but they reached git late.
+
+## 2026-10-01 — `R20260927-6` closed, and two things it said corrected
+
+Closed in `measure-long-value-layout`. The finding was that the clamp/wrap assertions match class
+substrings, so `line-clamp-3` → `line-clamp-1` passes. Both halves of that framing turned out to be
+off, and the correction is the reason the work took the shape it did.
+
+**What the entry claimed, and what was true.**
+
+- It said the e2e suite "measures page overflow, not the clamp depth". It did not. There was no
+  `scrollWidth`, `clientWidth`, `boundingBox` or `overflow` anywhere in `e2e/`, and `git log -S` over
+  that directory shows there never had been. The layout guarantee had *no* automated coverage at all,
+  which is a larger gap than a weak assertion — and the entry read as though the serious half was
+  already covered.
+- Its example is not a spec violation. The requirement says a long value "SHALL wrap or be shortened",
+  with no depth, so `line-clamp-1` satisfies it. A test that failed on a depth change would be pinning
+  a promise the spec does not make. `measure-long-value-layout` task 2.4 therefore asserts the
+  opposite of what the finding implied: the test must *keep passing* when the depth changes.
+
+**What now holds it.** `e2e/long-value-layout.spec.ts` measures, in both the 1280 and 1100 projects,
+with a 200-character unbroken company inserted straight into `e2e.db`: every column keeps the width it
+had, the document does not scroll sideways, and the value's box stays inside its column. A separate
+control test asserts the board is healthy *before* the long value exists, because a before-and-after
+comparison passes when both sides are equally wrong.
+
+**Proved non-vacuous by mutation.** Removing `line-clamp-3` overflows the page — `scrollWidth` 2087,
+so 807px at 1280 and 987px at 1100 — while the grid tracks stay equal. Only the overflow assertion
+catches it, which is why there are three measurements and not one. The archived note in
+`harden-kanban-board` task 4.6 recorded 613px; it does not say at which viewport, so the numbers are
+not comparable and the measured ones are what the test now holds.
+
+**What was removed.** The `break-words` and `line-clamp-` substring assertions in
+`ApplicationCard.test.tsx`. They could not fail for any reason the spec cares about and, beside a real
+measurement, read as evidence they were not. The jsdom test keeps the clause jsdom can check — the
+stored value is rendered in full — and is renamed to say so.
+
+The change declared `skip_specs: true`: the requirement already said what is now measured, so only the
+evidence changed.

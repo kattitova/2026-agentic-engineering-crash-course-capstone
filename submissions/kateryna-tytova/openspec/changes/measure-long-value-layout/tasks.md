@@ -44,18 +44,18 @@ convention this project already uses for that case.
 
 ## 4. Leave the database as it was found
 
-- [ ] 4.1 Verify `resetBoard` removes the inserted row, by running the whole suite twice in a row
+- [x] 4.1 Verify `resetBoard` removes the inserted row, by running the whole suite twice in a row
       against one already-seeded database with no reseed between, and confirming both runs pass
-- [ ] 4.2 Verify the seeded rows are unchanged after a run, by comparing the ids, companies and
+- [x] 4.2 Verify the seeded rows are unchanged after a run, by comparing the ids, companies and
       statuses in `e2e.db` before and after
 
 ## 5. Close the finding
 
-- [ ] 5.1 Update `docs/reviews/decisions.md` to close `R20260927-6`, and correct the two
+- [x] 5.1 Update `docs/reviews/decisions.md` to close `R20260927-6`, and correct the two
       misstatements in its entry: that the e2e suite measured page overflow — it did not, and
       `git log -S` over `e2e/` shows it never did — and that a change of clamp depth passing is a
       gap, when the spec sets no depth
-- [ ] 5.2 Verify the ledger's "Open — not yet decided" section is now empty, or says what remains,
+- [x] 5.2 Verify the ledger's "Open — not yet decided" section is now empty, or says what remains,
       rather than leaving a closed finding listed as open
-- [ ] 5.3 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
+- [x] 5.3 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
       change complete
