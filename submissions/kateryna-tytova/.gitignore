@@ -60,3 +60,6 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+
+# A stale archive claim blocks `openspec archive` for everyone who clones.
+.openspec-archive.lock
