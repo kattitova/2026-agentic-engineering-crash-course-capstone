@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import type { ActionResult } from "@/lib/applications/action-result";
-import { AddApplicationForm } from "./AddApplicationForm";
+import { ApplicationForm } from "./ApplicationForm";
 
 // The config deliberately has no `globals: true`, so RTL's automatic cleanup
 // never registers itself. Without this, renders pile up in one document.
@@ -38,9 +38,9 @@ async function submit(values: { company: string; position: string }) {
   });
 }
 
-describe("AddApplicationForm", () => {
+describe("ApplicationForm", () => {
   it("offers exactly the four fields the application has", () => {
-    render(<AddApplicationForm action={noop} />);
+    render(<ApplicationForm action={noop} />);
 
     expect(screen.getByLabelText(/company/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/position/i)).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe("AddApplicationForm", () => {
   });
 
   it("marks the company and the position as required, and the rest as not", () => {
-    render(<AddApplicationForm action={noop} />);
+    render(<ApplicationForm action={noop} />);
 
     expect(screen.getByLabelText(/company/i)).toBeRequired();
     expect(screen.getByLabelText(/position/i)).toBeRequired();
@@ -62,10 +62,10 @@ describe("AddApplicationForm", () => {
   });
 });
 
-describe("AddApplicationForm refusals", () => {
+describe("ApplicationForm refusals", () => {
   it("ties a field's message to that field", async () => {
     render(
-      <AddApplicationForm
+      <ApplicationForm
         action={refusing({
           ok: false,
           error: "Invalid application data",
@@ -89,7 +89,7 @@ describe("AddApplicationForm refusals", () => {
 
   it("shows an error with no field in one region rather than beside a field", async () => {
     render(
-      <AddApplicationForm action={refusing({ ok: false, error: "Could not add the application" })} />,
+      <ApplicationForm action={refusing({ ok: false, error: "Could not add the application" })} />,
     );
 
     await submit({ company: "Acme", position: "Dev" });
@@ -101,12 +101,12 @@ describe("AddApplicationForm refusals", () => {
   });
 });
 
-describe("AddApplicationForm after a refusal", () => {
+describe("ApplicationForm after a refusal", () => {
   it("keeps every value the person typed", async () => {
     // React resets an uncontrolled form once its action resolves, which would
     // throw away the whole submission on a refusal. This is the guard for that.
     render(
-      <AddApplicationForm
+      <ApplicationForm
         action={refusing({
           ok: false,
           error: "Invalid application data",
@@ -128,14 +128,14 @@ describe("AddApplicationForm after a refusal", () => {
   });
 });
 
-describe("AddApplicationForm announcing a refusal", () => {
+describe("ApplicationForm announcing a refusal", () => {
   it("moves focus to the first field at fault", async () => {
     // aria-describedby alone is read when the field next gets focus, not when
     // the message appears. Without moving focus, someone using a screen reader
     // presses the button, hears nothing, and is not told the application was
     // refused - so this is what makes the message reach them.
     render(
-      <AddApplicationForm
+      <ApplicationForm
         action={refusing({
           ok: false,
           error: "Invalid application data",
@@ -151,7 +151,7 @@ describe("AddApplicationForm announcing a refusal", () => {
   });
 
   it("leaves focus alone when the submission is accepted", async () => {
-    render(<AddApplicationForm action={refusing({ ok: true, data: {} as never })} />);
+    render(<ApplicationForm action={refusing({ ok: true, data: {} as never })} />);
 
     await submit({ company: "Acme", position: "Dev" });
 

@@ -10,7 +10,7 @@ import { APPLICATION_LIMITS, type ValidationErrors } from "@/lib/applications/va
  * jsdom: importing the server action would pull Prisma into the test. The
  * dialog supplies `createApplicationFromForm`.
  */
-export interface AddApplicationFormProps {
+export interface ApplicationFormProps {
   action: (
     prevState: ActionState<JobApplication>,
     formData: FormData,
@@ -81,7 +81,7 @@ type Values = Record<keyof ValidationErrors, string>;
 
 const EMPTY: Values = { company: "", position: "", link: "", notes: "" };
 
-export function AddApplicationForm({ action, onSuccess }: AddApplicationFormProps) {
+export function ApplicationForm({ action, onSuccess }: ApplicationFormProps) {
   const [values, setValues] = useState<Values>(EMPTY);
   const formRef = useRef<HTMLFormElement>(null);
   const set = (name: keyof Values) => (value: string) =>

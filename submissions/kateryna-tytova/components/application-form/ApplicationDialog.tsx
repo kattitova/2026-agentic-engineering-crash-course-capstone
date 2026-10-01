@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createApplicationFromForm } from "@/app/actions/applications";
-import { AddApplicationForm } from "./AddApplicationForm";
+import { ApplicationForm } from "./ApplicationForm";
 
 const TITLE_ID = "add-application-title";
 
-export function AddApplicationDialog() {
+export function ApplicationDialog() {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -74,7 +74,7 @@ export function AddApplicationDialog() {
           {/* Mounted only while open, so a closed-and-reopened dialog starts
               empty while a refusal leaves everything typed in place. */}
           {open ? (
-            <AddApplicationForm action={createApplicationFromForm} onSuccess={close} />
+            <ApplicationForm action={createApplicationFromForm} onSuccess={close} />
           ) : null}
         </div>
       </dialog>
