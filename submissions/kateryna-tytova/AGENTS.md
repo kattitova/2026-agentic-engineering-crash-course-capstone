@@ -69,6 +69,25 @@ calls for deviating from them, ask first instead of silently ignoring them.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
+## OpenSpec tooling
+
+Two things cost a session's time once each; both are environment facts, not
+decisions.
+
+- **The `openspec` CLI needs Node 22.** The shell here resolves `node` to
+  v16.13.2 from `PATH`, and the package fails to parse under it
+  (`import ... with {type: 'json'}`). Run OpenSpec commands with
+  `export PATH="/c/Program Files/nvm/v22.13.1:$PATH"` first, even though
+  `nvm list` reports 22 as current.
+- **A successful `openspec archive` leaves its lock behind.** It writes
+  `openspec/changes/archive/.openspec-archive.lock` and does not remove it, so
+  the *next* archive fails with `archive_target_exists` naming a change that was
+  never started. Observed three times. Before deleting it: read the `pid` inside
+  and confirm that process is gone, confirm no partial archive directory exists
+  for the change, and confirm the active change directory is intact. It is
+  gitignored, because it was once committed and then blocked archiving for
+  anyone who cloned the repo.
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
