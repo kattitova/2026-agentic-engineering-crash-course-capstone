@@ -184,3 +184,39 @@ describe("useCardMoves", () => {
     });
   });
 });
+
+describe("useCardMoves when the write does not settle into a result", () => {
+  it("releases the card and reports the failure", async () => {
+    // The action is typed to return ActionResult, but nothing made that true:
+    // updateApplicationStatus had no try/catch at all, so a locked database was
+    // a rejection inside startTransition. React sends that to the nearest error
+    // boundary, which is app/error.tsx, and the whole board goes. The card is
+    // the half that survives even a recovery: pending is released on the line
+    // after the await, which a rejection never reaches.
+    updateApplicationStatus.mockRejectedValue(new Error("database is locked"));
+    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+
+    await waitFor(() => expect(result.current.isMovePending("a")).toBe(false));
+    expect(result.current.error).not.toBeNull();
+  });
+
+  it("lets the same card be moved again after a failed move", async () => {
+    updateApplicationStatus.mockRejectedValue(new Error("database is locked"));
+    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+    await waitFor(() => expect(result.current.isMovePending("a")).toBe(false));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+
+    await waitFor(() => expect(updateApplicationStatus).toHaveBeenCalledTimes(2));
+  });
+});
