@@ -152,6 +152,15 @@ After completing all artifacts, summarize:
 - Change name and location
 - List of artifacts created with brief descriptions, plus any conditional artifact you skipped and why
 - What's ready: "All artifacts needed for implementation are ready."
+- **Offer the independent proposal review** (project rule, see `AGENTS.md` → "Independent review"):
+  the session that wrote these artifacts cannot check them, for the same reason the implementing
+  session cannot review its own diff. Offer it in one line, naming the agent and what it costs:
+  > "Before apply: shall I hand this to the `proposal-reviewer` agent? It reads the plan against
+  > `spec.md`, `AGENTS.md` and the real code, and returns PASS / PASS WITH NOTES / REVISE PROPOSAL."
+
+  On yes, spawn `proposal-reviewer` with the change name and stop there — reading its verdict is a
+  separate turn, and a REVISE PROPOSAL verdict is handled by `/opsx:update`, never by apply. On no,
+  record nothing and move on; the offer is made once and is not repeated.
 - Prompt: "The artifacts are ready for review. When you are ready, run `/opsx:apply` or ask me to apply this change."
 
 **Artifact Creation Guidelines**

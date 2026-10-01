@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "auto",
+    "deny": [
+      "Edit(app/**)",
+      "Edit(components/**)",
+      "Edit(lib/**)",
+      "Edit(e2e/**)",
+      "Edit(prisma/**)",
+      "Edit(public/**)",
+      "Edit(openspec/**)",
+      "Edit(docs/reviews/**)",
+      "Edit(docs/review-log.md)",
+      "Edit(spec.md)",
+      "Edit(AGENTS.md)",
+      "Edit(CLAUDE.md)",
+      "Edit(README.md)",
+      "Edit(package.json)",
+      "Edit(tsconfig.json)",
+      "Edit(next.config.ts)",
+      "Edit(vitest.config.mts)",
+      "Edit(eslint.config.mjs)",
+      "Edit(postcss.config.mjs)",
+      "Edit(prisma.config.ts)",
+      "Edit(playwright.config.ts)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(git stash *)",
+      "Bash(npm install *)",
+      "Bash(npm i *)",
+      "Bash(npm run *)",
+      "Bash(npx prisma *)",
+      "Bash(openspec archive *)",
+      "Bash(openspec new *)",
+      "Bash(openspec sync *)"
+    ]
+  }
+}

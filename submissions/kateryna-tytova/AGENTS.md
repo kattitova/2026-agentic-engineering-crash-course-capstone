@@ -53,6 +53,29 @@ calls for deviating from them, ask first instead of silently ignoring them.
   implementation that makes it pass (green). Don't write the test to match
   an already-finished implementation.
 
+## Independent review
+
+Two gates, and neither is run by the session whose work it checks — maker ≠ checker is the whole
+point, so a session never reviews its own output even when it is confident.
+
+- **After `propose`, before `apply`**: offer the `proposal-reviewer` agent
+  (`.claude/agents/proposal-reviewer.md`) on the finished artifacts. It checks the plan — scope
+  against `spec.md`, requirement coverage and testability, whether the Impact section's claims
+  still match the real code, task ordering and red-first compliance, design decisions — and
+  returns PASS / PASS WITH NOTES / **REVISE PROPOSAL**. It writes under `docs/proposal-reviews/`
+  and may not edit the artifacts. A REVISE PROPOSAL verdict goes to `/opsx:update`, not to apply.
+  Offer it once; the user may decline, and declining is not recorded anywhere.
+- **After `apply`, before `archive`**: the `reviewer` agent (`.claude/agents/reviewer.md`) on the
+  diff, as the Definition of Done in `spec.md` requires. The last task of every change asks for it.
+
+Each agent has a sibling settings file (`.claude/reviewer-settings.json`,
+`.claude/proposal-reviewer-settings.json`) that denies the writes its role forbids, for running it
+as a standalone session: `claude --settings .claude/proposal-reviewer-settings.json`.
+
+The propose-side offer is written into `.claude/skills/openspec-propose/SKILL.md`, which is a
+vendored generated file — if `openspec update` ever overwrites it, this section is the rule that
+survives, so re-add the offer there from here.
+
 ## Git / commits
 
 - Commit message format: `type(scope): short description`
