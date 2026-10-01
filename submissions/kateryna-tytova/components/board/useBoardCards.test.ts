@@ -232,7 +232,7 @@ describe("useBoardCards when the write does not settle into a result", () => {
   // move". One was written and removed: moveCard has no pending guard, so a
   // second call reaches the action whether or not the card was released, and
   // toHaveBeenCalledTimes(2) held either way. The scenario is pinned in the two
-  // places the behaviour actually lives - isMovePending going back to false
+  // places the behaviour actually lives - isCardBusy going back to false
   // above, and ApplicationCard enabling the handle when it does, which its own
   // tests cover.
 });
