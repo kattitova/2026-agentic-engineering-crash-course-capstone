@@ -197,10 +197,10 @@ control test asserts the board is healthy *before* the long value exists, becaus
 comparison passes when both sides are equally wrong.
 
 **Proved non-vacuous by mutation.** Removing `line-clamp-3` overflows the page — `scrollWidth` 2087,
-so 807px at 1280 and 987px at 1100 — while the grid tracks stay equal. Only the overflow assertion
-catches it, which is why there are three measurements and not one. The archived note in
-`harden-kanban-board` task 4.6 recorded 613px; it does not say at which viewport, so the numbers are
-not comparable and the measured ones are what the test now holds.
+so 807px at 1280 and 987px at 1100 — while the grid tracks stay equal. Two of the three measurements
+catch it, the overflow one and the bounding-box one; the width comparison is the one that passes,
+which is why there is more than one. The unclamped `h3` keeps a min-content width of ~2053px inside a
+268px column.
 
 **What was removed.** The `break-words` and `line-clamp-` substring assertions in
 `ApplicationCard.test.tsx`. They could not fail for any reason the spec cares about and, beside a real
@@ -209,3 +209,25 @@ stored value is rendered in full — and is renamed to say so.
 
 The change declared `skip_specs: true`: the requirement already said what is now measured, so only the
 evidence changed.
+
+### 2026-10-01 — two corrections to the entry above, from its review
+
+`R20261001-4` and `R20261001-5`, both Minor, both about claims rather than code. Recorded because the
+entry above is the record, and it was wrong twice.
+
+- **"Only the overflow assertion catches it" could not have been shown.** Playwright's `expect` is a
+  hard assertion, so once the overflow check threw, the bounding-box checks never ran. Re-measured by
+  running the box assertions first: with the clamp removed the `h3`'s right edge lands at 2053px
+  against a column ending at 268px, so that assertion fails too. Two of the three measurements catch
+  the mutation. The entry above is corrected.
+- **The 613px note did name its viewport.** `docs/reviews/2026-09-27-render-kanban-board-disposition.md`
+  says "measured in Chromium at 1440px with a 200-character unbroken value". The claim that it did not,
+  and that the numbers were therefore incomparable, was wrong on both counts: the content width is
+  ~2053px whatever the viewport and the overflow is that minus the window, which is why 1440px gave a
+  smaller figure than 1280px did. The comment in `components/board/ApplicationCard.tsx` still carried
+  613px as the live measurement and now points at the test instead.
+
+One process note, since it cost a run: the first attempt to re-measure used a throwaway Playwright
+config that starts `next start` without `npm run build`, so the server kept serving the unmutated
+build and the experiment reported a pass. A mutation to a component is invisible to e2e until the app
+is rebuilt.

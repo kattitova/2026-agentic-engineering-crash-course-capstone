@@ -102,12 +102,21 @@ test("a long unbroken value does not change any column's width", async ({ page }
     ).toBeLessThanOrEqual(TOLERANCE);
   }
 
-  // What removing the clamp actually does, and the assertion that catches it.
-  // The clamp implies overflow:hidden, which is what lets the flex item shrink
-  // below its content width; without it the row overflows while the grid tracks
-  // stay equal, so the width comparison above passes and only this fails.
-  // Measured with line-clamp-3 removed from the company: scrollWidth 2087 in
-  // both projects, so 807px of overflow at 1280 and 987px at 1100.
+  // What removing the clamp actually does. The clamp implies overflow:hidden,
+  // which is what lets the flex item shrink below its content width; without it
+  // the h3 keeps its min-content width and the row overflows while the grid
+  // tracks stay equal.
+  //
+  // Measured with line-clamp-3 removed from the company: the h3's own right edge
+  // lands at 2053px while its column ends at 268px, and the document's
+  // scrollWidth is 2087px in both projects - 807px of overflow at 1280, 987px at
+  // 1100. The 2026-09-27 note recorded 613px at 1440px, which is the same
+  // content measured against a wider viewport.
+  //
+  // Both this assertion and the bounding-box one below catch that mutation. It
+  // is the width comparison above that passes, which is why it is not the only
+  // measurement here. Checked by running the box assertions first, because hard
+  // assertions stop at the first failure and would otherwise hide it.
   expect(await scrollsHorizontally(page)).toBe(false);
 
   // And the value itself stays inside its column, in case it paints outside the

@@ -24,10 +24,13 @@ convention this project already uses for that case.
       lists
 - [x] 2.3 Prove the test is not vacuous by mutation: remove `line-clamp-3` from the company in
       `ApplicationCard.tsx`, confirm the test fails and record the overflow it reports, then restore
-      the class. Measured 807px at 1280 and 987px at 1100 (`scrollWidth` 2087 in both), not the 613px
-      the archived note recorded — that note does not say at which viewport, so the numbers are not
-      comparable and the new ones are what the test now holds. Only the overflow assertion failed;
-      the column widths stayed equal, which is why `design.md` asks for three measurements
+      the class. Measured 807px at 1280 and 987px at 1100 (`scrollWidth` 2087 in both). The
+      2026-09-27 note recorded 613px and does name its viewport — 1440px — so the figures agree:
+      the unclamped `h3` holds a min-content width of ~2053px whatever the viewport, and the overflow
+      is that minus the window. Two of the three measurements catch the mutation, the overflow one and
+      the bounding-box one; the width comparison is the one that passes. Established by running the
+      box assertions first, since hard assertions stop at the first failure and the original run could
+      not have shown it
 - [x] 2.4 Verify the test fails for the right reason by also confirming it still passes when
       `line-clamp-3` is changed to `line-clamp-1` — the depth is a design choice the spec leaves
       open, and a test that failed here would be pinning a promise the spec does not make

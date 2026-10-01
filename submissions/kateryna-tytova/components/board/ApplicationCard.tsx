@@ -45,7 +45,9 @@ export function ApplicationCard({
             keeps one card from towering over the rest, and — because it implies
             overflow:hidden — also lets this flex item shrink below its content
             width. Drop the clamp and a 200-character company name overflows the
-            row again. Measured: 613px of horizontal overflow without, 0 with. */}
+            row again: the h3 keeps its min-content width of ~2053px inside a
+            268px column. Held by e2e/long-value-layout.spec.ts, which measures
+            it in both viewports rather than leaving it to a note here. */}
         <h3
           id={companyId}
           className="line-clamp-3 break-words text-sm font-semibold leading-5 text-slate-900"
