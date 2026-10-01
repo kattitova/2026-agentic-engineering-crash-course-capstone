@@ -17,6 +17,20 @@ export interface ApplicationFormProps {
   ) => Promise<ActionResult<JobApplication>>;
   /** Called once per successful submission, so the dialog can close itself. */
   onSuccess?: (application: JobApplication) => void;
+  /**
+   * The application being edited. Absent means the form is adding one, and no
+   * id is submitted at all.
+   *
+   * A prop of its own rather than a fifth entry in `initialValues`:
+   * `initialValues` is exactly the four fields the person edits, and widening
+   * it to hold a value they cannot edit would blur what it is for. The hidden
+   * field has to live inside this `<form>`, so the dialog cannot place it.
+   */
+  id?: string;
+  /** The stored values to start from. Empty fields when adding. */
+  initialValues?: Values;
+  submitLabel?: string;
+  pendingLabel?: string;
 }
 
 const FIELD_CLASS =
@@ -77,12 +91,23 @@ function Field({
   );
 }
 
-type Values = Record<keyof ValidationErrors, string>;
+export type Values = Record<keyof ValidationErrors, string>;
 
 const EMPTY: Values = { company: "", position: "", link: "", notes: "" };
 
-export function ApplicationForm({ action, onSuccess }: ApplicationFormProps) {
-  const [values, setValues] = useState<Values>(EMPTY);
+export function ApplicationForm({
+  action,
+  onSuccess,
+  id,
+  initialValues = EMPTY,
+  submitLabel = "Add application",
+  pendingLabel = "Adding…",
+}: ApplicationFormProps) {
+  // Seeded once per mount, not synced: the dialog mounts the form only while it
+  // is open, so opening it on another application is a new mount with a new
+  // seed - and a refusal keeps what the person typed rather than snapping back
+  // to the stored values.
+  const [values, setValues] = useState<Values>(initialValues);
   const formRef = useRef<HTMLFormElement>(null);
   const set = (name: keyof Values) => (value: string) =>
     setValues((current) => ({ ...current, [name]: value }));
@@ -119,6 +144,10 @@ export function ApplicationForm({ action, onSuccess }: ApplicationFormProps) {
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-4">
+      {/* Only in edit mode, so an addition submits no id at all. The value is
+          re-validated server-side like any other form value. */}
+      {id === undefined ? null : <input type="hidden" name="id" value={id} readOnly />}
+
       {formError ? (
         <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
           {formError}
@@ -166,7 +195,7 @@ export function ApplicationForm({ action, onSuccess }: ApplicationFormProps) {
         disabled={pending}
         className="inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {pending ? "Adding…" : "Add application"}
+        {pending ? pendingLabel : submitLabel}
       </button>
     </form>
   );

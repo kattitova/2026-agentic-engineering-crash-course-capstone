@@ -57,21 +57,21 @@ e2e run in 7.5, not by a unit test.
 
 ## 4. The form serves editing
 
-- [ ] 4.1 Give `ApplicationForm` an `initialValues` prop (defaulting to empty), an optional `id`
+- [x] 4.1 Give `ApplicationForm` an `initialValues` prop (defaulting to empty), an optional `id`
       prop rendered as a hidden `id` field only when present, and a submit label. Verify tests
       assert the four fields open pre-filled from `initialValues`, that an application with no link
       and no notes opens with those two fields empty, and that no hidden id field is rendered in add
       mode
-- [ ] 4.2 Verify with tests that an edit refused for a cleared company, a non-http link and an
+- [x] 4.2 Verify with tests that an edit refused for a cleared company, a non-http link and an
       over-maximum company keeps what the person typed — not the stored values — shows the field
       message, and moves focus to the first field at fault, the same assertions add mode makes
-- [ ] 4.3 Verify with a test that a failed edit (the action returns `{ ok: false, error }` with no
+- [x] 4.3 Verify with a test that a failed edit (the action returns `{ ok: false, error }` with no
       field) leaves the form open with its values and renders the message in the single alert region
-- [ ] 4.4 Verify with a test that submitting again after a failed edit calls the action a second
+- [x] 4.4 Verify with a test that submitting again after a failed edit calls the action a second
       time with the same values, so "The submission can be retried" is checked and not assumed
-- [ ] 4.5 Verify with a test that an edit reported as not found renders that message rather than the
+- [x] 4.5 Verify with a test that an edit reported as not found renders that message rather than the
       "was not updated" message, so the two failure kinds are distinguishable to the person
-- [ ] 4.6 Let `ApplicationDialog` be opened on an existing application: an `application` prop that
+- [x] 4.6 Let `ApplicationDialog` be opened on an existing application: an `application` prop that
       selects the edit action, the edit heading, the id passed to the form and the pre-filled values.
       Verify with tests that it closes on success, that dismissing it leaves the application
       unchanged, and that opening it on a second application shows none of the first one's values

@@ -1,4 +1,4 @@
-import { ApplicationDialog } from "@/components/application-form/ApplicationDialog";
+import { AddApplicationButton } from "@/components/application-form/AddApplicationButton";
 import { Board } from "@/components/board/Board";
 import { listApplications } from "@/lib/applications/queries";
 
@@ -14,7 +14,7 @@ export default async function Home() {
             Every application you are tracking, grouped by stage.
           </p>
         </div>
-        <ApplicationDialog />
+        <AddApplicationButton />
       </header>
 
       <Board applications={applications} />
