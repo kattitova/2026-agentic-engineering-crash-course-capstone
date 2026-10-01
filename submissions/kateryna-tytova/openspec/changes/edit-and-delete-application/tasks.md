@@ -86,7 +86,7 @@ e2e run in 7.5, not by a unit test.
       while still rendering both new controls, covering "Clearing an optional value" at the card
 - [x] 5.3 Thread the callbacks through `BoardColumn` and `DraggableCard`, and verify
       `BoardColumn.test.tsx` asserts each card's controls call back with that card's id
-- [ ] 5.4 Run `npm run test:e2e -- long-value-layout` and verify a 200-character company name still
+- [x] 5.4 Run `npm run test:e2e -- long-value-layout` and verify a 200-character company name still
       does not widen its column in either viewport with the two extra controls present. **Runs
       after 6.2:** until the board passes the callbacks down there are no controls on a real card to
       measure around
@@ -110,21 +110,21 @@ e2e run in 7.5, not by a unit test.
 
 ## 7. End to end and record-keeping
 
-- [ ] 7.1 Add an e2e spec that edits an application from its card, reloads, and verifies the card
+- [x] 7.1 Add an e2e spec that edits an application from its card, reloads, and verifies the card
       shows the edited values, is still in its original column with the counts unchanged, and that
       no second card was created
-- [ ] 7.2 Add an e2e spec that clears a stored link through the edit form, reloads, and verifies the
+- [x] 7.2 Add an e2e spec that clears a stored link through the edit form, reloads, and verifies the
       card offers no posting link
-- [ ] 7.3 Add an e2e spec that deletes an application through the confirmation, reloads, and
+- [x] 7.3 Add an e2e spec that deletes an application through the confirmation, reloads, and
       verifies the card is gone and the column count has dropped; verify the spec cleans up after
       itself the way `long-value-layout.spec.ts` does
-- [ ] 7.4 Add an e2e spec that declines the confirmation and verifies the card is still there after a
+- [x] 7.4 Add an e2e spec that declines the confirmation and verifies the card is still there after a
       reload
-- [ ] 7.5 Add an e2e spec that tabs past the last control of the open edit form and of the open
+- [x] 7.5 Add an e2e spec that tabs past the last control of the open edit form and of the open
       confirmation, and verifies focus stays inside each — the two scenarios jsdom cannot cover
-- [ ] 7.6 Add the `spec.md` change-log entry recording that editing deliberately leaves `status`,
+- [x] 7.6 Add the `spec.md` change-log entry recording that editing deliberately leaves `status`,
       `appliedDate` and `statusChangedAt` alone, and that deletion is final with no undo in the MVP.
       Verify the entry is dated and names this change
-- [ ] 7.7 Run `npm run verify` and the full `npm run test:e2e`, and verify both pass with no errors
+- [x] 7.7 Run `npm run verify` and the full `npm run test:e2e`, and verify both pass with no errors
 - [ ] 7.8 Request a review pass from a separate agent session against this change, and verify the
       outcome is recorded under `docs/reviews/` and indexed in `docs/review-log.md`

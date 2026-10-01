@@ -1,6 +1,9 @@
 import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import Database from "better-sqlite3";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient, type Prisma } from "../app/generated/prisma/client";
+import { SEED_SNAPSHOT } from "../e2e/reset-board";
 
 /**
  * Builds the disposable database the e2e suite runs against.
@@ -72,6 +75,20 @@ async function main(): Promise<void> {
     console.log(`Seeded ${applications.length} applications into ${E2E_DATABASE_URL}.`);
   } finally {
     await prisma.$disconnect();
+  }
+
+  // Read back and written out as storage values, so resetBoard can restore the
+  // rows byte for byte without knowing how Prisma encodes a DateTime in SQLite.
+  // A spec that edits or deletes a seeded row cannot be undone from a list of
+  // ids and statuses, which is what this replaces.
+  const db = new Database("e2e.db");
+  try {
+    const rows = db.prepare("SELECT * FROM JobApplication ORDER BY id").all();
+    writeFileSync(SEED_SNAPSHOT, `${JSON.stringify(rows, null, 2)}
+`);
+    console.log(`Wrote ${rows.length} rows to ${SEED_SNAPSHOT}.`);
+  } finally {
+    db.close();
   }
 }
 

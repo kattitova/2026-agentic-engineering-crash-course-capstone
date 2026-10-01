@@ -46,6 +46,9 @@ next-env.d.ts
 *.db
 *.db-journal
 
+# the e2e seed snapshot, written by `npm run e2e:db` beside e2e.db
+/e2e-seed.json
+
 # agent skills installed by `prisma init` (npx skills add prisma/skills);
 # .claude/skills/prisma-* are symlinks with absolute local paths
 /.agents/

@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import {
   createApplicationFromForm,
   updateApplicationFromForm,
 } from "@/app/actions/applications";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationForm, type Values } from "./ApplicationForm";
-
-const TITLE_ID = "application-dialog-title";
 
 export interface ApplicationDialogProps {
   open: boolean;
@@ -36,6 +34,11 @@ function valuesOf(application: JobApplication): Values {
 export function ApplicationDialog({ open, application, onClose }: ApplicationDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const editing = application ?? null;
+  // Per instance, not a module constant: the page holds two of these dialogs -
+  // the header's add one and the board's edit one - and a shared id made
+  // aria-labelledby resolve to whichever heading came first in the document,
+  // so the edit dialog announced itself as "Add application".
+  const titleId = useId();
 
   // showModal() rather than show(): the focus trap, Escape, the inert
   // background and the backdrop are all the browser's, so none of them is
@@ -58,12 +61,12 @@ export function ApplicationDialog({ open, application, onClose }: ApplicationDia
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      aria-labelledby={TITLE_ID}
+      aria-labelledby={titleId}
       className="w-full max-w-md rounded-2xl p-0 backdrop:bg-slate-900/40 open:m-auto"
     >
       <div className="flex flex-col gap-5 p-6">
         <div className="flex items-start justify-between gap-4">
-          <h2 id={TITLE_ID} className="text-lg font-semibold text-slate-900">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
             {editing === null ? "Add application" : "Edit application"}
           </h2>
           <button

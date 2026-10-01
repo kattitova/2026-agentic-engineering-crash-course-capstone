@@ -191,3 +191,32 @@ plan, and why. Empty is fine on Day 0.)_
   thing to add and the person adding it would have no way to see what broke it.
   Recorded rather than left as a code comment because it is a constraint on
   every action written from here on.
+
+- **2026-10-01 — editing an application deliberately leaves `status`,
+  `appliedDate` and `statusChangedAt` alone (MVP item 4).** The edit form offers
+  only company, position, link and notes. Status is owned by the drag-and-drop
+  path, which is also what decides `appliedDate` and `statusChangedAt`; a form
+  that could set status would give those three fields a second owner and a
+  second set of rules, and correcting a typo would move the card or restart the
+  "N days in this status" clock that MVP items 5 and 6 are built on. The
+  guarantee is structural rather than conditional: `updateApplication` writes
+  whatever `validateApplicationInput` returned, which is exactly those four
+  fields. Pinned by a test on the action and measured end to end against the
+  stored row, because a reset clock is invisible on the board.
+
+- **2026-10-01 — deleting an application is confirmed and final; no undo
+  (MVP item 4).** Nothing restores a deleted application: an undo would need
+  soft deletes in `prisma/schema.prisma`, which is a data-model change this item
+  does not justify on its own. A confirmation step is what stands in for it, and
+  it names the application so the person can see which card they are about to
+  lose. If an undo is wanted later, it is its own change with its own schema
+  entry here.
+
+- **2026-10-01 — `updateApplication` and `deleteApplication` revalidate the
+  board when the row turns out to be gone.** `updateApplicationStatus` already
+  did; these two returned "Application not found" without it, so a card for a
+  row somebody deleted elsewhere stayed on the board until a manual reload —
+  against both of MVP item 4's specs, which say the card must not be left there.
+  One `notFound()` helper now owns that branch for all three actions.
+  Deliberately not on the catch-all branch: there the write provably did not
+  happen, and refetching the board would say otherwise.

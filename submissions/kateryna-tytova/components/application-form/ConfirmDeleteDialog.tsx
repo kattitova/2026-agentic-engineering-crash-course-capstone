@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
-
-const TITLE_ID = "confirm-delete-title";
-const BODY_ID = "confirm-delete-body";
 
 export interface ConfirmDeleteDialogProps {
   /** The application to delete. `null` closes the dialog. */
@@ -34,6 +31,10 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const open = application !== null;
+  // Per instance, for the same reason ApplicationDialog's is: a module constant
+  // is a duplicate id as soon as the page holds a second dialog.
+  const titleId = useId();
+  const bodyId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -51,18 +52,18 @@ export function ConfirmDeleteDialog({
     <dialog
       ref={dialogRef}
       onClose={onCancel}
-      aria-labelledby={TITLE_ID}
-      aria-describedby={BODY_ID}
+      aria-labelledby={titleId}
+      aria-describedby={bodyId}
       className="w-full max-w-sm rounded-2xl p-0 backdrop:bg-slate-900/40 open:m-auto"
     >
       {/* Mounted only while open, so the name in the heading is never the name of
           an application the dialog has already been dismissed for. */}
       {application === null ? null : (
         <div className="flex flex-col gap-4 p-6">
-          <h2 id={TITLE_ID} className="text-lg font-semibold text-slate-900">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
             {`Delete ${application.company}?`}
           </h2>
-          <p id={BODY_ID} className="text-sm leading-5 text-slate-600">
+          <p id={bodyId} className="text-sm leading-5 text-slate-600">
             {`${application.position} at ${application.company} will be removed from the board. This cannot be undone.`}
           </p>
 
