@@ -14,6 +14,20 @@ import { prisma } from "@/lib/prisma";
 const BOARD_PATH = "/";
 
 const NOT_FOUND = { ok: false, error: "Application not found" } as const;
+
+/**
+ * The row is gone, so the board is showing a card for something that no longer
+ * exists. Revalidating is what takes that card off without a reload - the same
+ * reason updateApplicationStatus revalidates on its own not-found branch.
+ *
+ * Only on this branch, never on a failure the action could not classify: there
+ * the write provably did not happen, and refetching the board would say
+ * otherwise.
+ */
+function notFound() {
+  revalidatePath(BOARD_PATH);
+  return NOT_FOUND;
+}
 const INVALID_ID = { ok: false, error: "Invalid application id" } as const;
 
 /**
@@ -39,6 +53,9 @@ function failed(where: keyof typeof FAILED, error: unknown) {
 }
 
 // Server actions are public endpoints: TypeScript types don't guard runtime input.
+// Hence `id: unknown` on each action below rather than `id: string` - the id can
+// arrive from a hidden form field, and a signature that claimed otherwise would
+// need a cast at the call site to say so.
 function isValidId(id: unknown): id is string {
   return typeof id === "string" && id.length > 0;
 }
@@ -90,7 +107,7 @@ export async function createApplicationFromForm(
 }
 
 export async function updateApplicationStatus(
-  id: string,
+  id: unknown,
   status: unknown,
 ): Promise<ActionResult<JobApplication>> {
   if (!isValidId(id)) {
@@ -116,18 +133,16 @@ export async function updateApplicationStatus(
   }
 
   if (!application) {
-    // Revalidate on this branch too: the board is optimistically showing a card
-    // for a row that no longer exists, and the client's rollback would only put
-    // it back in a column it no longer belongs to.
-    revalidatePath(BOARD_PATH);
-    return NOT_FOUND;
+    // The client's rollback would only put the card back in a column it no
+    // longer belongs to, so the board has to be refetched rather than restored.
+    return notFound();
   }
   revalidatePath(BOARD_PATH);
   return { ok: true, data: application };
 }
 
 export async function updateApplication(
-  id: string,
+  id: unknown,
   input: RawApplicationInput,
 ): Promise<ActionResult<JobApplication>> {
   if (!isValidId(id)) {
@@ -143,7 +158,7 @@ export async function updateApplication(
     application = await prisma.jobApplication.update({ where: { id }, data: validation.data });
   } catch (error) {
     if (isRecordNotFound(error)) {
-      return NOT_FOUND;
+      return notFound();
     }
     return failed("update", error);
   }
@@ -152,7 +167,27 @@ export async function updateApplication(
   return { ok: true, data: application };
 }
 
-export async function deleteApplication(id: string): Promise<ActionResult<{ id: string }>> {
+/**
+ * The `useActionState` shape over `updateApplication`.
+ *
+ * The id comes from a hidden field, so it is as untrusted as the rest of the
+ * form and goes through untouched: `updateApplication` already refuses anything
+ * that is not a non-empty string, and `FormData.get` returns `string | File |
+ * null` - exactly the shapes that check is for.
+ */
+export async function updateApplicationFromForm(
+  _prevState: ActionState<JobApplication>,
+  formData: FormData,
+): Promise<ActionResult<JobApplication>> {
+  return updateApplication(formData.get("id"), {
+    company: formData.get("company"),
+    position: formData.get("position"),
+    link: formData.get("link"),
+    notes: formData.get("notes"),
+  });
+}
+
+export async function deleteApplication(id: unknown): Promise<ActionResult<{ id: string }>> {
   if (!isValidId(id)) {
     return INVALID_ID;
   }
@@ -161,7 +196,7 @@ export async function deleteApplication(id: string): Promise<ActionResult<{ id: 
     await prisma.jobApplication.delete({ where: { id } });
   } catch (error) {
     if (isRecordNotFound(error)) {
-      return NOT_FOUND;
+      return notFound();
     }
     return failed("remove", error);
   }

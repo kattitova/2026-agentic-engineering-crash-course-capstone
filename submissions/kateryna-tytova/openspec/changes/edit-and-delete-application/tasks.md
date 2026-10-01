@@ -15,10 +15,10 @@ e2e run in 7.5, not by a unit test.
 - [x] 1.1 Rename `useCardMoves` to `useBoardCards` (hook, `useCardMoves.ts`, `useCardMoves.test.ts`)
       with no behaviour change, and verify `npm run verify` passes with the move tests unchanged in
       substance
-- [ ] 1.2 Rename `AddApplicationForm` to `ApplicationForm` and `AddApplicationDialog` to
+- [x] 1.2 Rename `AddApplicationForm` to `ApplicationForm` and `AddApplicationDialog` to
       `ApplicationDialog` (files, tests, and the import where the dialog is mounted) with no
       behaviour change, and verify `npm run verify` passes
-- [ ] 1.3 Commit 1.1 and 1.2 separately as `refactor(board): …` and `refactor(application-form): …`,
+- [x] 1.3 Commit 1.1 and 1.2 separately as `refactor(board): …` and `refactor(application-form): …`,
       and verify `git log --stat` shows each rename alone with no feature code in it
 
 ## 2. The write path: what it writes, and what it says when the row is gone
