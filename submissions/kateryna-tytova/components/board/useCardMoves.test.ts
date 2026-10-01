@@ -202,6 +202,12 @@ describe("useCardMoves when the write does not settle into a result", () => {
 
     await waitFor(() => expect(result.current.isMovePending("a")).toBe(false));
     expect(result.current.error).not.toBeNull();
+    // The same assertion the ok:false test makes, because the requirement says
+    // this case behaves "exactly as for a failure the storage does describe" -
+    // and the card returning is the half of that a message does not prove.
+    expect(result.current.shown.find((item) => item.id === "a")?.status).toBe(
+      ApplicationStatus.APPLIED,
+    );
   });
 
   it("lets the same card be moved again after a failed move", async () => {
