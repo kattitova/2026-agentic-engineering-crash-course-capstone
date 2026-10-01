@@ -78,32 +78,34 @@ e2e run in 7.5, not by a unit test.
 
 ## 5. Card controls
 
-- [ ] 5.1 Add `onEdit` and `onDelete` callbacks to `ApplicationCard` as two controls in a `shrink-0`
+- [x] 5.1 Add `onEdit` and `onDelete` callbacks to `ApplicationCard` as two controls in a `shrink-0`
       group beside the drag handle, each with an `aria-label` naming the application, and verify
       `ApplicationCard.test.tsx` asserts both are controls, are named per application, and that
       activating one does not fire the drag handle's listeners
-- [ ] 5.2 Verify with a test that a card whose stored link has been cleared renders no link control
+- [x] 5.2 Verify with a test that a card whose stored link has been cleared renders no link control
       while still rendering both new controls, covering "Clearing an optional value" at the card
-- [ ] 5.3 Thread the callbacks through `BoardColumn` and `DraggableCard`, and verify
+- [x] 5.3 Thread the callbacks through `BoardColumn` and `DraggableCard`, and verify
       `BoardColumn.test.tsx` asserts each card's controls call back with that card's id
 - [ ] 5.4 Run `npm run test:e2e -- long-value-layout` and verify a 200-character company name still
-      does not widen its column in either viewport with the two extra controls present
+      does not widen its column in either viewport with the two extra controls present. **Runs
+      after 6.2:** until the board passes the callbacks down there are no controls on a real card to
+      measure around
 
 ## 6. Deletion, confirmed
 
-- [ ] 6.1 Add `ConfirmDeleteDialog` on the `showModal()` pattern, naming the application in a
+- [x] 6.1 Add `ConfirmDeleteDialog` on the `showModal()` pattern, naming the application in a
       heading the dialog is labelled by, with a confirm and a decline control. Verify tests assert
       that it is announced with the application's name, that declining deletes nothing and returns
       focus to the control that opened it, and that the confirm control is disabled while the
       deletion is in flight
-- [ ] 6.2 Wire `Board` to hold `editingId` and `deletingId`, render one `ApplicationDialog` and one
+- [x] 6.2 Wire `Board` to hold `editingId` and `deletingId`, render one `ApplicationDialog` and one
       `ConfirmDeleteDialog`, and route deletion failures into the existing assertive alert region.
       Verify a test asserts a failed deletion shows the message on the board while the board itself
       is still rendered
-- [ ] 6.3 Verify with a test that a second failed deletion, of a different card, replaces the first
+- [x] 6.3 Verify with a test that a second failed deletion, of a different card, replaces the first
       message and is announced rather than being taken for the first, covering "One failure does not
       hide the next"
-- [ ] 6.4 Verify with a test that a confirmed deletion removes the card and decreases that column's
+- [x] 6.4 Verify with a test that a confirmed deletion removes the card and decreases that column's
       count, and that every other card stays in its own column
 
 ## 7. End to end and record-keeping

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { BOARD_COLUMNS } from "@/lib/applications/board";
 import { BoardColumn } from "./BoardColumn";
@@ -93,5 +93,55 @@ describe("BoardColumn", () => {
 
     expect(container.querySelectorAll("article")).toHaveLength(2);
     expect(screen.queryByText(/no applications yet/i)).toBeNull();
+  });
+});
+
+describe("BoardColumn passing the per-card controls down", () => {
+  const CARDS = [
+    application("a", { company: "Acme Cloud" }),
+    application("b", { company: "Globex" }),
+  ];
+
+  it("gives every card its own edit and delete controls", () => {
+    render(
+      <BoardColumn
+        column={APPLIED_COLUMN}
+        applications={CARDS}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    for (const name of ["Edit Acme Cloud", "Delete Acme Cloud", "Edit Globex", "Delete Globex"]) {
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("calls back with the application whose control was activated", () => {
+    // The defect this guards: one callback shared by every card in the column,
+    // closed over the wrong application, deletes somebody else's card.
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <BoardColumn
+        column={APPLIED_COLUMN}
+        applications={CARDS}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Globex" }));
+    expect(onEdit).toHaveBeenCalledWith(CARDS[1]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Acme Cloud" }));
+    expect(onDelete).toHaveBeenCalledWith(CARDS[0]);
+  });
+
+  it("renders no such controls when the column is given none", () => {
+    render(<BoardColumn column={APPLIED_COLUMN} applications={CARDS} />);
+
+    expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
   });
 });

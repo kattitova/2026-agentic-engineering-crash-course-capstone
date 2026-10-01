@@ -13,6 +13,8 @@ interface BoardColumnProps {
   isMovePending?: (cardId: string) => boolean;
   focusCardId?: string | null;
   onFocusRestored?: () => void;
+  onEdit?: (application: JobApplication) => void;
+  onDelete?: (application: JobApplication) => void;
   draggable?: boolean;
 }
 
@@ -22,6 +24,8 @@ export function BoardColumn({
   isMovePending = () => false,
   focusCardId = null,
   onFocusRestored,
+  onEdit,
+  onDelete,
   draggable = false,
 }: BoardColumnProps) {
   const headingId = `column-${column.status}-heading`;
@@ -69,9 +73,16 @@ export function BoardColumn({
               isMovePending={isMovePending(application.id)}
               shouldRestoreFocus={application.id === focusCardId}
               onFocusRestored={onFocusRestored}
+              onEdit={onEdit}
+              onDelete={onDelete}
             />
           ) : (
-            <ApplicationCard key={application.id} application={application} />
+            <ApplicationCard
+              key={application.id}
+              application={application}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
           ),
         )
       )}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationCard } from "./ApplicationCard";
 
@@ -114,5 +114,120 @@ describe("ApplicationCard", () => {
     const link = screen.getByRole("link");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAccessibleName(/opens in a new tab/i);
+  });
+});
+
+describe("ApplicationCard's edit and delete controls", () => {
+  it("offers both, named after the application", () => {
+    render(
+      <ApplicationCard
+        application={application({ company: "Acme Cloud" })}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    // Named rather than "Edit" and "Delete": a column of cards otherwise offers
+    // the same two control names over and over, with nothing to tell them apart.
+    expect(screen.getByRole("button", { name: "Edit Acme Cloud" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Acme Cloud" })).toBeInTheDocument();
+  });
+
+  it("calls back with its own application", () => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    const card = application({ id: "b", company: "Globex" });
+    render(<ApplicationCard application={card} onEdit={onEdit} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Globex" }));
+    expect(onEdit).toHaveBeenCalledWith(card);
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Globex" }));
+    expect(onDelete).toHaveBeenCalledWith(card);
+  });
+
+  it("does not fire the drag handle's listeners", () => {
+    // The controls sit in the same row as the handle, and dnd-kit's listeners
+    // are pointer-event handlers. If either control were inside the handle - or
+    // the handle wrapped the row - activating one would start a drag.
+    const onPointerDown = vi.fn();
+    const onKeyDown = vi.fn();
+    render(
+      <ApplicationCard
+        application={application({ company: "Acme Cloud" })}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        dragHandle={{
+          attributes: {} as never,
+          listeners: { onPointerDown, onKeyDown },
+        }}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Edit Acme Cloud" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Delete Acme Cloud" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Edit Acme Cloud" }), { key: " " });
+
+    expect(onPointerDown).not.toHaveBeenCalled();
+    expect(onKeyDown).not.toHaveBeenCalled();
+  });
+
+  it("stays usable while that card's move is being stored", () => {
+    // Only the handle is held during a move: the person can still correct a typo
+    // or give up on the application while its status write is outstanding.
+    render(
+      <ApplicationCard
+        application={application({ company: "Acme Cloud" })}
+        isMovePending
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Move Acme Cloud" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Edit Acme Cloud" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Delete Acme Cloud" })).toBeEnabled();
+  });
+
+  it("offers neither when the card is rendered without them", () => {
+    // How the card is rendered outside a DndContext, and how BoardColumn renders
+    // it in its own tests.
+    render(<ApplicationCard application={application({ company: "Acme Cloud" })} />);
+
+    expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
+  });
+
+  it("offers a card with a link exactly four controls, counting the link", () => {
+    // Counted, so a fourth button added to the header has to fail here.
+    render(
+      <ApplicationCard
+        application={application({ company: "Acme Cloud", link: "https://acme.test/job" })}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole("button")).toHaveLength(3);
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+});
+
+describe("ApplicationCard after an optional value was cleared", () => {
+  it("offers no posting link while still offering both controls", () => {
+    // The one scenario where an edit changes what the card renders: clearing the
+    // link stores null, and the card must drop the control rather than offer an
+    // empty href.
+    render(
+      <ApplicationCard
+        application={application({ company: "Acme Cloud", link: null })}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit Acme Cloud" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Acme Cloud" })).toBeInTheDocument();
   });
 });

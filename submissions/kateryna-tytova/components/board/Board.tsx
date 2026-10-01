@@ -11,6 +11,8 @@ import {
   type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
 import { useCallback, useState } from "react";
+import { ApplicationDialog } from "@/components/application-form/ApplicationDialog";
+import { ConfirmDeleteDialog } from "@/components/application-form/ConfirmDeleteDialog";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { BOARD_COLUMNS, groupApplicationsByStatus } from "@/lib/applications/board";
 import {
@@ -81,6 +83,33 @@ export function Board({ applications }: { applications: JobApplication[] }) {
   const [focusCardId, setFocusCardId] = useState<string | null>(null);
   const clearFocusTarget = useCallback(() => setFocusCardId(null), []);
 
+  // Ids rather than the applications themselves, so each dialog follows the row
+  // as it is re-rendered: holding the object would leave the edit form seeded
+  // from a snapshot taken before a revalidation landed.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const byId = (id: string | null) => shown.find((card) => card.id === id) ?? null;
+
+  const editing = byId(editingId);
+  const deleting = byId(deletingId);
+
+  const openEdit = useCallback((application: JobApplication) => setEditingId(application.id), []);
+  const closeEdit = useCallback(() => setEditingId(null), []);
+  const openDelete = useCallback((application: JobApplication) => setDeletingId(application.id), []);
+  const closeDelete = useCallback(() => setDeletingId(null), []);
+
+  // Closed before the write is started, not after: the optimistic removal takes
+  // the card off the board immediately, and a confirmation still naming it would
+  // then be asking about something the person can no longer see. The failure
+  // message goes to the board's own region for exactly that reason.
+  const confirmDelete = useCallback(
+    (application: JobApplication) => {
+      setDeletingId(null);
+      removeCard(application.id);
+    },
+    [removeCard],
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     // Registering the sensor is not enough; the coordinate getter is what makes
@@ -142,10 +171,23 @@ export function Board({ applications }: { applications: JobApplication[] }) {
             isMovePending={isCardBusy}
             focusCardId={focusCardId}
             onFocusRestored={clearFocusTarget}
+            onEdit={openEdit}
+            onDelete={openDelete}
             draggable
           />
         ))}
       </div>
+
+      {/* One of each for the whole board, rather than a pair per card: a dialog
+          inside a card would have to restore focus from a control that is about
+          to be unmounted, which is exactly what a deleted card does. */}
+      <ApplicationDialog open={editing !== null} application={editing} onClose={closeEdit} />
+      <ConfirmDeleteDialog
+        application={deleting}
+        pending={deleting !== null && isCardBusy(deleting.id)}
+        onConfirm={confirmDelete}
+        onCancel={closeDelete}
+      />
     </DndContext>
   );
 }

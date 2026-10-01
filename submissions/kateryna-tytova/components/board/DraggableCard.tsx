@@ -11,6 +11,8 @@ interface DraggableCardProps {
   /** True for the card a keyboard move just landed on. */
   shouldRestoreFocus?: boolean;
   onFocusRestored?: () => void;
+  onEdit?: (application: JobApplication) => void;
+  onDelete?: (application: JobApplication) => void;
 }
 
 /**
@@ -25,6 +27,8 @@ export function DraggableCard({
   isMovePending,
   shouldRestoreFocus = false,
   onFocusRestored,
+  onEdit,
+  onDelete,
 }: DraggableCardProps) {
   const handleRef = useRef<HTMLButtonElement>(null);
   const { setNodeRef, attributes, listeners, transform, isDragging } = useDraggable({
@@ -57,6 +61,8 @@ export function DraggableCard({
       <ApplicationCard
         application={application}
         isMovePending={isMovePending}
+        onEdit={onEdit}
+        onDelete={onDelete}
         dragHandle={{ attributes, listeners, ref: handleRef }}
       />
     </div>
