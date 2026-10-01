@@ -48,16 +48,17 @@ describe("ApplicationCard", () => {
     expect(screen.getByRole("link")).toHaveAccessibleName(/Acme Cloud/);
   });
 
-  it("wraps and clamps long values so one card cannot widen its column", () => {
-    // Weak by nature: jsdom has no layout, so this asserts the classes are
-    // applied, not the resulting geometry. Task 4.6 checks the real thing.
+  it("shows a very long value in full rather than truncating the stored text", () => {
+    // Only the clause jsdom can check. The geometry half of this requirement -
+    // that the value changes no column's width and does not overflow the page -
+    // is measured in e2e/long-value-layout.spec.ts, where layout exists. The
+    // class assertions that used to stand in for it were removed: they could not
+    // fail for any reason the spec cares about, and they read as evidence.
     const long = "A".repeat(200);
     render(<ApplicationCard application={application({ company: long, position: long })} />);
 
-    for (const text of [screen.getByText(long, { selector: "h3" }), screen.getByText(long, { selector: "p" })]) {
-      expect(text.className).toContain("break-words");
-      expect(text.className).toContain("line-clamp-");
-    }
+    expect(screen.getByText(long, { selector: "h3" })).toBeInTheDocument();
+    expect(screen.getByText(long, { selector: "p" })).toBeInTheDocument();
   });
 
   // The two tests below protect requirements that already hold. There is no red

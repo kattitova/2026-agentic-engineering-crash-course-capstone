@@ -35,12 +35,12 @@ convention this project already uses for that case.
 
 ## 3. Remove the proxy it replaces
 
-- [ ] 3.1 In `components/board/ApplicationCard.test.tsx`, remove the `break-words` and `line-clamp-`
+- [x] 3.1 In `components/board/ApplicationCard.test.tsx`, remove the `break-words` and `line-clamp-`
       class assertions and rename the test to say what it now checks — that a very long value is
       present on the card — keeping the assertion that the value is rendered
-- [ ] 3.2 Verify the renamed test still fails if the value is not rendered, by mutation: have the
+- [x] 3.2 Verify the renamed test still fails if the value is not rendered, by mutation: have the
       card render `application.company.slice(0, 10)` and confirm it fails, then restore
-- [ ] 3.3 Run `npm run verify` and confirm lint, typecheck and the unit suite pass
+- [x] 3.3 Run `npm run verify` and confirm lint, typecheck and the unit suite pass
 
 ## 4. Leave the database as it was found
 
