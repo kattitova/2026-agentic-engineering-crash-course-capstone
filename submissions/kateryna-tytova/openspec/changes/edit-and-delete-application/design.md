@@ -84,9 +84,17 @@ render for no gain.
 
 ### One dialog per board, not one per card
 
-`Board` holds `editingId: string | null` and `deletingId: string | null`, and renders one
+`Board` holds `editing: JobApplication | null` and `deleting: JobApplication | null`, and renders one
 `ApplicationDialog` and one `ConfirmDeleteDialog`. `ApplicationCard` gains `onEdit` and `onDelete`
-callbacks, passed down through `BoardColumn` and `DraggableCard` the way `isMovePending` already is.
+callbacks, passed down through `BoardColumn` and `DraggableCard` the way the busy predicate already
+is.
+
+The applications themselves, not their ids looked up in the shown list. Ids were tried first and
+were wrong: looking a card up tied the dialog's open state to the row still being there, and the
+not-found branch of both actions revalidates the board — so the row left the list in the same breath
+as the result arrived, the dialog closed, and the form was unmounted with its "Application not
+found" message still in it. Nothing is gained by looking up, either: the form is keyed by the
+application and seeds its fields once per mount, so it never re-read the looked-up row.
 
 Alternative considered: a dialog inside each card. Rejected — it puts one `<dialog>` and one form
 state per application in the tree, and the native focus restoration has to work from a control that
@@ -98,8 +106,13 @@ the card's control when it still exists, and does nothing when it does not, whic
 
 Same `showModal()` pattern as the existing dialog: it is styleable, it can be driven in jsdom, it
 can name the application in its heading, and it cannot be suppressed by the browser the way a
-native confirm can. `window.confirm` would also block the event loop, which rules out showing a
-pending state while the deletion is stored.
+native confirm can.
+
+It carries no pending state. The board closes it before starting the write, so a second
+confirmation is impossible because the control no longer exists rather than because it is disabled
+— which is what "A deletion in flight cannot be started again" asks for. A disabled-while-writing
+control was specified first and removed: with the confirmation already closed it was a state the
+application cannot produce, and two tests asserting one.
 
 ### One optimistic list, two kinds of change
 
@@ -122,11 +135,13 @@ The hook keeps its current test seam: the action is reached through a module imp
 mock, dnd-kit stays out of it, and the new deletion path is unit-testable the same way the move path
 is.
 
-The hook's predicate is renamed with it: `isMovePending` becomes `isCardBusy`, because after the
-merge it answers "this card has a write in flight", which a deletion satisfies too. `ApplicationCard`
-keeps its own `isMovePending` prop name — there it governs the drag handle specifically, and that is
-still what it means. `Board` passes `isCardBusy` into it, since a card with any write outstanding is
-a card that must not be dragged.
+The predicate is renamed with it, and the new name travels the whole way down: `isMovePending`
+becomes `isCardBusy` on the hook, on `BoardColumn`, on `DraggableCard` and on `ApplicationCard`.
+Keeping the old name on the card was tried and is not honest — the card receives the merged
+predicate, so the prop would claim "a move is pending" while meaning "any write is". What the card
+does with it is unchanged: it disables the drag handle, because a card with a write outstanding must
+not start another move. The edit and delete controls stay usable, so a typo can still be corrected
+while a status write is in flight.
 
 ### Edit failures are reported in the form, deletion failures on the board
 

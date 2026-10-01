@@ -258,6 +258,20 @@ describe("Board when a deletion fails", () => {
 
     expect(deleteApplication).toHaveBeenCalledTimes(2);
   });
+
+  it("leaves the card movable again after a failed deletion", async () => {
+    // The other half of "the card is usable again": the requirement says it can
+    // be deleted again *and moved again*, and a released drag handle is what the
+    // second half means.
+    deleteApplication.mockResolvedValue({ ok: false, error: FAILED.remove });
+    render(<Board applications={CARDS} />);
+
+    await confirmDeletionOf("Acme Cloud");
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Move Acme Cloud" })).toBeEnabled(),
+    );
+  });
 });
 
 describe("Board opening an application for editing", () => {
