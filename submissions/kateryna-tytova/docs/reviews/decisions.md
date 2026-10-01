@@ -123,3 +123,38 @@ written acceptance of the limit.
 The OpenSpec verification pass raised no critical items and four smaller ones; all four are closed —
 `design.md`'s uncontrolled-form paragraph corrected, and e2e checks added for dismissal, for nothing
 being shown that was not stored, and for the optional fields being stored as NULL.
+
+## 2026-10-01 — the `R20260929-1` class, closed across every write path
+
+`R20260929-1` was filed and fixed as one site: a failed write escaping
+`createApplicationFromForm`. It was never one site. Found while exploring before MVP item 4, by
+reading the actions rather than the diff:
+
+| Site | State before | Severity if it had been filed |
+| --- | --- | --- |
+| `updateApplicationStatus` + `useCardMoves` | No `try`/`catch` anywhere on the path, and a live caller through drag-and-drop. A locked database during a move replaced the board, and `setPending` sat after the `await` so the card stayed held for good | Critical — the same defect as `R20260929-1`, in shipped behaviour |
+| `updateApplication` | `catch` tested `P2025` and rethrew the rest | Latent: no caller yet |
+| `deleteApplication` | Same | Latent: no caller yet |
+
+Closed in `harden-write-failures`: every action ends in a catch-all returning `ActionResult`, so the
+type is a guarantee rather than a hope, and `useCardMoves` releases the card in a `finally`. The
+`try`/`catch` that `R20260929-1` added to the form wrapper is removed as dead code — the existing
+test for it passes unchanged, because the action now returns the string the wrapper used to.
+
+Two things this adds that no review asked for:
+
+- `unstable_rethrow` runs first in every catch. `redirect()` and `notFound()` signal by throwing, so
+  a catch-all would swallow them: the redirect would not happen and the action would report a
+  failure for a write that succeeded. Nothing calls them today; MVP item 4 is where somebody will.
+  Verified with the real throw — probed first, because a hand-built lookalike would pass against a
+  guard that checks something else.
+- Each `try` holds the storage call alone, with `revalidatePath` outside it. Reporting a failed
+  cache call as "the application was not added" would be the same lie in a smaller place.
+
+Not closed here, and not forgotten: `app/global-error.tsx` for a failure in `app/layout.tsx`,
+narrowing `app/error.tsx` so a board render bug does not also remove the add control, and
+`app/error.tsx`'s "failed to read them" wording. All three are about where boundaries sit. The
+wording one is now weaker on purpose: no write reaches that boundary any more, so the message is
+wrong only when something is already broken rather than on a routine, reachable path.
+
+No entry in this ledger still describes the action convention as unenforced.

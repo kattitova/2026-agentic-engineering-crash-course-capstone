@@ -104,7 +104,8 @@ plan, and why. Empty is fine on Day 0.)_
 
 - **2026-09-27 — read path and write path have different error shapes, on
   purpose.** Server actions are mutations: they validate their arguments,
-  return `ActionResult` (`{ ok: false, error }`) and never throw. Data loaders
+  return `ActionResult` (`{ ok: false, error }`) and never throw. (Stated here
+  on this date, and only made true on 2026-10-01 — see that entry.) Data loaders
   are ordinary async functions in `lib/applications/`: they throw, and
   `app/error.tsx` shows the failure and offers a retry. `listApplications` moved
   out of `app/actions/applications.ts` to make this exact — that file carries a
@@ -164,3 +165,29 @@ plan, and why. Empty is fine on Day 0.)_
   fixed: the window is milliseconds against a local SQLite file, and keeping Escape working is
   worth more than closing it — a modal that will not close on Escape is its own accessibility
   problem. Undoing a write needs delete, which is MVP item 4.
+
+- **2026-10-01 — "a server action never throws" is now carried by the
+  functions, not only by this document.** The convention above was written on
+  2026-09-27 and enforced by nothing. Three of the four actions could let a
+  storage failure escape: `updateApplicationStatus` had no `try`/`catch` at all,
+  and `updateApplication` and `deleteApplication` caught `P2025` and rethrew the
+  rest. `useCardMoves` awaited the first of those bare, so a locked database
+  during a card move was an unhandled rejection inside a transition — which
+  React sends to `app/error.tsx`, replacing the board with a message about a
+  failed *read*. That is the defect the 2026-09-29 review found in the add form
+  (`R20260929-1`), in a path that review never looked at. Every action now ends
+  in a catch-all returning `ActionResult`, so the type is a promise the function
+  keeps and MVP item 4's forms inherit it without having to know the rule
+  exists. Each `try` holds the storage call alone: reporting a failed
+  `revalidatePath` as "the application was not added" would say the opposite of
+  what happened.
+
+- **2026-10-01 — a catch-all must let Next's own throws through.** `redirect()`,
+  `notFound()`, `forbidden()` and `unauthorized()` signal by throwing, so a
+  catch-all swallows them and the redirect silently never happens while the
+  action reports a failure for a write that succeeded. No action calls one
+  today; `unstable_rethrow` from `next/navigation` runs first in every catch
+  anyway, because MVP item 4 is where a redirect after saving is the natural
+  thing to add and the person adding it would have no way to see what broke it.
+  Recorded rather than left as a code comment because it is a constraint on
+  every action written from here on.

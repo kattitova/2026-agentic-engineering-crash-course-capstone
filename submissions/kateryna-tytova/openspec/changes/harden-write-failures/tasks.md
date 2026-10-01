@@ -53,19 +53,19 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 
 ## 5. Remove what the guarantee makes dead
 
-- [ ] 5.1 Remove the `try`/`catch` from `createApplicationFromForm`, and verify its existing
+- [x] 5.1 Remove the `try`/`catch` from `createApplicationFromForm`, and verify its existing
       "reports a failed write instead of throwing past the form" test still passes — now because
       `createApplication` returns the failure rather than because the wrapper caught it
-- [ ] 5.2 Verify the whole form path still holds end to end by running `npm run test:e2e`, since
+- [x] 5.2 Verify the whole form path still holds end to end by running `npm run test:e2e`, since
       the wrapper is what `e2e/add-application.spec.ts` exercises
 
 ## 6. Documentation and final verification
 
-- [ ] 6.1 Record in the `spec.md` Spec change log that the convention is now carried by the
+- [x] 6.1 Record in the `spec.md` Spec change log that the convention is now carried by the
       functions rather than only stated, and verify the existing 2026-09-27 entry that states it is
       updated rather than contradicted
-- [ ] 6.2 Append to `docs/reviews/decisions.md` that the `R20260929-1` class of defect is closed
+- [x] 6.2 Append to `docs/reviews/decisions.md` that the `R20260929-1` class of defect is closed
       across every write path, naming the three sites the review did not see, and verify no entry
       still describes the convention as unenforced
-- [ ] 6.3 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
+- [x] 6.3 Run `npm run verify` and `npm run test:e2e` and confirm both pass before marking the
       change complete
