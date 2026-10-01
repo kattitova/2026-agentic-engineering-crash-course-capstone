@@ -1,0 +1,116 @@
+import { expect, test, type Page } from "@playwright/test";
+import { resetBoard, withDatabase } from "./reset-board";
+
+const COLUMNS = ["Wishlist", "Applied", "Interview", "Offer", "Rejected"] as const;
+
+/**
+ * Longer than the form will accept - APPLICATION_LIMITS caps company at 120 -
+ * which is the point: this is the value the interface cannot produce and the
+ * database can still hold. A single unbroken word, as the spec scenario says.
+ */
+const LONG = "A".repeat(200);
+
+/**
+ * Fractional CSS pixels: a grid dividing its container by five rarely lands on
+ * integers. 1px is far below the ~600px a real layout break produces, so do not
+ * tighten this - it would buy nothing and cost a flake.
+ */
+const TOLERANCE = 1;
+
+async function columnWidths(page: Page): Promise<number[]> {
+  const widths: number[] = [];
+  for (const name of COLUMNS) {
+    const box = await page.getByRole("region", { name }).boundingBox();
+    expect(box, `column ${name} has no box`).not.toBeNull();
+    widths.push(box?.width ?? 0);
+  }
+  return widths;
+}
+
+/** True when the page can be scrolled sideways, which the board must never be. */
+function scrollsHorizontally(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const root = document.documentElement;
+    return root.scrollWidth > root.clientWidth + 1;
+  });
+}
+
+test.beforeEach(() => {
+  resetBoard();
+});
+
+test("the board starts with equal columns and no sideways scroll", async ({ page }) => {
+  // The control for the long-value test below. A before-and-after comparison
+  // passes when both are equally wrong, so the "before" has to be asserted in
+  // its own right or "unchanged" means nothing.
+  await page.goto("/");
+
+  const widths = await columnWidths(page);
+
+  // Not zero and not undefined: a selector that matched nothing would otherwise
+  // read as five equal widths and pass.
+  for (const [index, width] of widths.entries()) {
+    expect(width, `column ${COLUMNS[index]} is too narrow to be real`).toBeGreaterThan(100);
+  }
+  for (const width of widths) {
+    expect(Math.abs(width - (widths[0] ?? 0))).toBeLessThanOrEqual(TOLERANCE);
+  }
+
+  expect(await scrollsHorizontally(page)).toBe(false);
+});
+
+/** Puts one application on the board that the form could never have created. */
+function insertLongValueApplication(): void {
+  withDatabase((db) => {
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO JobApplication
+         (id, company, position, status, link, notes, appliedDate, statusChangedAt, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
+    ).run("e2e-long-value", LONG, LONG, "WISHLIST", now, now, now);
+  });
+}
+
+test("a long unbroken value does not change any column's width", async ({ page }) => {
+  await page.goto("/");
+  const before = await columnWidths(page);
+  expect(await scrollsHorizontally(page)).toBe(false);
+
+  insertLongValueApplication();
+  await page.reload();
+
+  // The card is really there, so the measurement is of a board that holds the
+  // value rather than of one that silently dropped it.
+  const wishlist = page.getByRole("region", { name: "Wishlist" });
+  const heading = wishlist.getByRole("heading", { name: LONG });
+  await expect(heading).toBeVisible();
+
+  // The requirement's own sentence - "SHALL NOT change the width of its column"
+  // - as a comparison rather than as an absolute number.
+  const after = await columnWidths(page);
+  for (const [index, width] of after.entries()) {
+    expect(
+      Math.abs(width - (before[index] ?? 0)),
+      `column ${COLUMNS[index]} changed width`,
+    ).toBeLessThanOrEqual(TOLERANCE);
+  }
+
+  // What removing the clamp actually does, and the assertion that catches it.
+  // The clamp implies overflow:hidden, which is what lets the flex item shrink
+  // below its content width; without it the row overflows while the grid tracks
+  // stay equal, so the width comparison above passes and only this fails.
+  // Measured with line-clamp-3 removed from the company: scrollWidth 2087 in
+  // both projects, so 807px of overflow at 1280 and 987px at 1100.
+  expect(await scrollsHorizontally(page)).toBe(false);
+
+  // And the value itself stays inside its column, in case it paints outside the
+  // card without moving anything.
+  const column = await wishlist.boundingBox();
+  const text = await heading.boundingBox();
+  expect(column).not.toBeNull();
+  expect(text).not.toBeNull();
+  expect(text?.x ?? 0).toBeGreaterThanOrEqual((column?.x ?? 0) - TOLERANCE);
+  expect((text?.x ?? 0) + (text?.width ?? 0)).toBeLessThanOrEqual(
+    (column?.x ?? 0) + (column?.width ?? 0) + TOLERANCE,
+  );
+});
