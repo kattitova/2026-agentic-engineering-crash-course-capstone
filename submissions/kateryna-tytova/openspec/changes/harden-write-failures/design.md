@@ -65,6 +65,16 @@ added" for a row that *was* added — which is the same defect this change descr
 A cache call that fails after a successful write is a bug, and it should reach the error boundary as
 one rather than be dressed up as a storage failure.
 
+**Which intent governs the move path.** The first review pass found that these two decisions pull
+against each other: the hook's `catch` is the nearest handler, so it catches a `revalidatePath`
+rejection too and reports "The move was not saved" for a move that *was* saved, with the optimistic
+card unwinding to the old column until the next load. The hook's `catch` governs, deliberately. It
+is a net of last resort, and a net cannot tell what it caught — the choice is between a message that
+may be wrong about one failure nobody has observed, and losing the whole board to a boundary. The
+message is the cheaper mistake, and the `console.error` holds what actually happened. Keeping
+`revalidatePath` outside the `try` still decides what the *action* reports, which is where every
+other caller reads from.
+
 ### The known failure keeps its own message; the unknown one gets a generic one
 
 `isRecordNotFound` already distinguishes `P2025` and returns "Application not found". That stays,
@@ -145,9 +155,13 @@ interface stuck.
 It also gains a `catch` that reports the failure, which this document did not originally call for.
 The `finally` alone would release the card and say nothing, and the rejection would still travel to
 the error boundary and take the board. For the same reason as the `finally`: the cost of being wrong
-about the action's guarantee is the whole board, so the hook holds its own. The message is a copy of
-the action's rather than an import, because a `"use server"` file can only export async functions —
-a forced duplication, and the one place a drifting string would go unnoticed.
+about the action's guarantee is the whole board, so the hook holds its own.
+
+The message it reports is `FAILED.move`, imported from `lib/applications/action-result.ts`. It was
+first copied into the hook on the grounds that a `"use server"` file cannot export a constant — true,
+but it constrains what that file exports, not where the string lives. The review pass caught the
+over-reading. One constant, two importers, and the hook's test asserts it exactly, so the two
+readers cannot drift.
 
 `useOptimistic` needs no equivalent: the optimistic value is derived from the server list each
 render, so it unwinds when the transition ends.
@@ -175,6 +189,10 @@ new test on `createApplication` itself is what pins the guarantee where it now l
 - **`unstable_rethrow` may be renamed** → accepted. It is Next's own API for this and the only one;
   the prefix marks the name, not the behaviour. Four call sites, one import, and a typecheck
   failure on upgrade is a loud way to find out.
+- **A `revalidatePath` failure on the move path is reported as a failed move** → accepted, with the
+  reasoning under "Each `try` encloses the storage call and nothing else". The row was written and
+  the message says it was not. Nobody has observed `revalidatePath` throwing against a constant
+  path, and the alternative is the board being replaced.
 - **"The card returns to its original column" is asserted but not pinned** → recorded rather than
   mitigated. The scenario for an unclassifiable failure says it behaves exactly as a reported one,
   and the test asserts all three clauses. The column clause has no mutation that kills it alone:

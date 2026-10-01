@@ -158,3 +158,18 @@ wording one is now weaker on purpose: no write reaches that boundary any more, s
 wrong only when something is already broken rather than on a routine, reachable path.
 
 No entry in this ledger still describes the action convention as unenforced.
+
+## 2026-10-01 — `harden-write-failures` review findings
+
+PASS WITH NOTES, no blocking follow-ups. All three Minor were correct.
+
+| Finding | Severity | Resolution |
+| --- | --- | --- |
+| `R20261001-1` — "lets the same card be moved again after a failed move" could not fail on its own assertion: `moveCard` has no pending guard, so the second call reached the action whether or not the card was released | Minor | **Fixed by deletion.** A test that cannot fail is worse than no test, because it reads as evidence. The scenario is pinned in the two places the behaviour lives — `isMovePending` returning to false, and `ApplicationCard` enabling the handle, which its own tests already cover. `tasks.md` 3.2 overstated it and now records what happened. |
+| `R20261001-2` — the move-failure message was duplicated into `useCardMoves`, justified by `"use server"` not exporting constants | Minor | **Fixed, and the reasoning was wrong, not just the code.** That rule constrains what the actions file *exports*, not where a string lives. `FAILED` moved to `lib/applications/action-result.ts`; both files import it and the hook's test asserts the exact constant, so drift is impossible by construction. |
+| `R20261001-3` — commit `400d43a` is labelled `docs` but removes the form wrapper's `catch`; `aabb2ae` is labelled `docs(openspec)` but adds a test assertion | Minor | **Accepted, not rewritten**, consistently with `R20260929-3`. The finding is correct and this instance is worse than that one: it hides a behaviour change, not a rename, so bisecting a form regression would skip it. Not rewritten because history is not rewritten after review, and because splitting it needs an interactive rebase this environment does not support. The rule going forward: a commit that touches a code path does not get a `docs` type, even when most of its diff is prose. |
+| Open question — a `revalidatePath` failure after a successful move | — | **Resolved in `design.md`, intent stated.** The two decisions did pull against each other. The hook's `catch` governs: it is a net of last resort and cannot tell what it caught, so it may report "the move was not saved" for a move that was. The alternative is losing the board. Recorded as a risk rather than hidden. |
+
+The reviewer declined to re-raise that this change's planning artifacts were committed after its code
+(`74c3e62`). Noted here anyway, because it is true and the 2026-09-21 §2 finding was about exactly
+that: the artifacts were written in explore mode before any code, but they reached git late.

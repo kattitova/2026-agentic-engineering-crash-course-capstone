@@ -26,3 +26,4 @@ their verdicts are retrofitted from their findings.
 - [2026-09-28 — add-drag-and-drop (re-review)](reviews/2026-09-28-add-drag-and-drop-re-review.md) — PASS WITH NOTES (0 critical, 0 major, 1 minor carried forward)
 - [2026-09-29 — add-application](reviews/2026-09-29-add-application.md) — CHANGES REQUESTED (1 critical, 1 major, 1 minor)
 - [2026-09-29 — add-application (re-review)](reviews/2026-09-29-add-application-re-review.md) — PASS (0 critical, 0 major, 0 minor)
+- [2026-10-01 — harden-write-failures](reviews/2026-10-01-harden-write-failures.md) — PASS WITH NOTES (0 critical, 0 major, 3 minor)

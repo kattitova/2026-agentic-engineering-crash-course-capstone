@@ -35,9 +35,11 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 
 - [x] 3.1 Move the release of the pending card in `useCardMoves` into a `finally`, and verify the
       red test from 1.1 passes
-- [x] 3.2 Verify the card can be moved again after a failed move, with a test that moves the same
-      card twice and asserts the second attempt reaches the action — the scenario the delta spec
-      adds, and the half of the defect that a returned result alone does not fix
+- [x] 3.2 Verify the card can be moved again after a failed move. Written as a test that moved the
+      same card twice, then removed on review: `moveCard` has no pending guard, so the second call
+      reaches the action either way and the assertion could not fail. The scenario is pinned where
+      the behaviour lives — `isMovePending` returning to false, and `ApplicationCard` enabling the
+      handle when it does, which its own tests already cover
 - [x] 3.3 Verify by mutation that 3.1 is load-bearing: restore the release to its old position and
       confirm 1.1 and 3.2 fail, then put it back
 
