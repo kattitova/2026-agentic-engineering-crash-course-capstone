@@ -157,6 +157,18 @@ Working on task 4/7: <task description>
 All tasks complete! You can archive this change with `/opsx:archive`.
 ```
 
+**Before archiving — the project's order and the review offer** (see `AGENTS.md` →
+"Independent review"): run `npm run verify`, then `openspec verify`, and only once both are clean
+**offer** the `reviewer` pass — do not spawn it. Offer it even when a task asked for a review pass:
+that task means *do not forget to ask*, not *launch it*, and the same holds for a re-review after
+findings are fixed. One line is enough:
+
+> "`npm run verify` and `openspec verify` are clean. Shall I hand the diff to the `reviewer` agent
+> (separate session, maker ≠ checker)? It returns PASS / PASS WITH NOTES / CHANGES REQUESTED."
+
+Then stop and wait. After fixes, re-run both verify steps and offer the re-review the same way.
+Do not run `/opsx:archive` while a review is outstanding.
+
 **Output On Pause (Issue Encountered)**
 
 ```

@@ -99,11 +99,14 @@ it — it is out of scope by construction. A re-review that finds all blockers f
 regressions **must** issue PASS or PASS WITH NOTES, carrying forward the earlier Minor items
 unchanged rather than restating them.
 
-### Pre-implementation risk pass
-Use when the change is proposed but not implemented (tasks unchecked, files absent). Say so at
-the top, review whatever the diff does contain, and record the proposal's risks as **Notes**,
-never as Major — unwritten code cannot have a defect. This pass never issues CHANGES REQUESTED
-on the strength of risks alone.
+### Not your stage: a change that is proposed but not implemented
+If the tasks are unchecked and the files are absent, there is no diff and this is not your pass.
+Say so in one line and hand it to the `proposal-reviewer` agent
+(`.claude/agents/proposal-reviewer.md`), which reviews the artifacts and whose verdict can send a
+plan back. Do not write a review file, do not record the proposal's risks, and do not index
+anything — a second opinion on a plan from an agent that cannot refuse it is worse than none.
+A change partly implemented is yours: review the diff that exists and name the unimplemented
+requirements under checklist item 1.
 
 ## Scope resolution
 
@@ -214,7 +217,7 @@ The review file carries:
 # <date> — <feature / OpenSpec change name>
 
 **Reviewer:** reviewer sub-agent (separate session; maker ≠ checker)
-**Mode:** full review | re-review | pre-implementation risk pass
+**Mode:** full review | re-review
 **Reviewed:** <what diff / commits / files>
 **Verification run:** <npm run verify result, or why it was not run>
 **Verdict:** <PASS | PASS WITH NOTES | CHANGES REQUESTED> — <n> critical, <n> major, <n> minor

@@ -171,8 +171,16 @@ The most valuable section. For every claim the Impact and Why sections make abou
   "Implement the dialog" is not verifiable; it is Minor, or Major if nothing downstream checks
   that behaviour either.
 - **A new UI interaction has at least one test task.** Per `AGENTS.md`, it is otherwise not done.
-- **The review handoff is a task.** The last section should include requesting a `reviewer` pass
-  and recording it under `docs/reviews/`. Its absence is Minor.
+- **The way out of `apply` is in the right order.** Per `AGENTS.md` → "Order on the way out of
+  `apply`", the last section carries `npm run verify`, then `openspec verify`, then a `reviewer`
+  pass recorded under `docs/reviews/`. A missing `reviewer` task is Minor; a missing
+  `openspec verify` task, or one ordered after the review, is **Major** — it spends an independent
+  session on artifact-versus-code drift that a command catches for free, which has happened on
+  this project before.
+- **No task reads as authorizing a silent launch.** A review task says to *request* or *offer* the
+  pass, never to run it: `AGENTS.md` requires the user to be asked every time, including for a
+  re-review. Wording that an implementing session could read as "spawn it" is Minor, and say which
+  words to change.
 
 ### 5. Design decisions
 

@@ -67,14 +67,39 @@ point, so a session never reviews its own output even when it is confident.
   Offer it once; the user may decline, and declining is not recorded anywhere.
 - **After `apply`, before `archive`**: the `reviewer` agent (`.claude/agents/reviewer.md`) on the
   diff, as the Definition of Done in `spec.md` requires. The last task of every change asks for it.
+  `reviewer` reviews a diff only; a change that is proposed but not implemented goes to
+  `proposal-reviewer` instead, and neither agent covers the other's stage.
+
+### Order on the way out of `apply`
+
+`npm run verify` → `openspec verify` → the `reviewer` pass → fix → re-review → `archive`.
+
+The two cheap mechanical gates come **first**, and the reason is concrete: on
+`edit-and-delete-application` the review pass was spent discovering that `design.md` had drifted
+from the implementation (commit `c0b4a32`), which is exactly what `openspec verify` is built to
+catch — and `openspec verify` then had to run anyway, after the fixes. A review session is the
+expensive opinion; it must never be the first thing to notice that the artifacts and the code
+disagree. So: an independent review is never requested while `npm run verify` or `openspec verify`
+is unrun or failing, and both are re-run after the review's findings are fixed.
+
+### Always offer, never launch silently
+
+Launching any review agent is **offered to the user and waited on**, every time — including when
+tasks.md carries it as a task. A task like "request a review pass from a separate agent session"
+means *do not forget to ask*, not *spawn it without asking*; the user decides when a review
+session is spent, and a pass that runs unbidden on a diff the author has not finished reading is
+wasted. The same applies to a re-review after fixes: offer it, do not start it.
+
+A task that could be read as authorizing a silent launch is a proposal defect —
+`proposal-reviewer` flags it under its task checklist.
 
 Each agent has a sibling settings file (`.claude/reviewer-settings.json`,
 `.claude/proposal-reviewer-settings.json`) that denies the writes its role forbids, for running it
 as a standalone session: `claude --settings .claude/proposal-reviewer-settings.json`.
 
-The propose-side offer is written into `.claude/skills/openspec-propose/SKILL.md`, which is a
-vendored generated file — if `openspec update` ever overwrites it, this section is the rule that
-survives, so re-add the offer there from here.
+Both offers are written into the vendored skills — `.claude/skills/openspec-propose/SKILL.md` and
+`.claude/skills/openspec-apply-change/SKILL.md` — which are generated files. If `openspec update`
+ever overwrites them, this section is the rule that survives, so re-add both offers from here.
 
 ## Git / commits
 
