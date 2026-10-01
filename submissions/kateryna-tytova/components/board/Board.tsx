@@ -74,7 +74,7 @@ const columnCoordinateGetter: KeyboardCoordinateGetter = (
 };
 
 export function Board({ applications }: { applications: JobApplication[] }) {
-  const { shown, isMovePending, error, moveCard } = useBoardCards(applications);
+  const { shown, isCardBusy, error, moveCard, removeCard } = useBoardCards(applications);
   // Only set for a keyboard move: after a pointer drag the person's attention is
   // already where they dropped the card, and focusing would show a ring they
   // did not ask for.
@@ -139,7 +139,7 @@ export function Board({ applications }: { applications: JobApplication[] }) {
             key={column.status}
             column={column}
             applications={grouped[column.status]}
-            isMovePending={isMovePending}
+            isMovePending={isCardBusy}
             focusCardId={focusCardId}
             onFocusRestored={clearFocusTarget}
             draggable

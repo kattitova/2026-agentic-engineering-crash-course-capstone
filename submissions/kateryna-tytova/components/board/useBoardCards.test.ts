@@ -7,11 +7,12 @@ import { FAILED, type ActionResult } from "@/lib/applications/action-result";
 import type { CardMove } from "@/lib/applications/move";
 import { useBoardCards } from "./useBoardCards";
 
-const { updateApplicationStatus } = vi.hoisted(() => ({
+const { updateApplicationStatus, deleteApplication } = vi.hoisted(() => ({
   updateApplicationStatus: vi.fn(),
+  deleteApplication: vi.fn(),
 }));
 
-vi.mock("@/app/actions/applications", () => ({ updateApplicationStatus }));
+vi.mock("@/app/actions/applications", () => ({ updateApplicationStatus, deleteApplication }));
 
 const TIMESTAMP = new Date("2026-09-01T00:00:00.000Z");
 
@@ -42,9 +43,9 @@ const moveOf = (cardId: string, from: ApplicationStatus, to: ApplicationStatus):
 });
 
 /** Lets a test decide when — and how — each pending write settles. */
-function deferAction() {
+function deferAction(action = updateApplicationStatus) {
   const settlers: ((result: ActionResult<JobApplication>) => void)[] = [];
-  updateApplicationStatus.mockImplementation(
+  action.mockImplementation(
     () =>
       new Promise<ActionResult<JobApplication>>((resolve) => {
         settlers.push(resolve);
@@ -53,8 +54,23 @@ function deferAction() {
   return settlers;
 }
 
+/** The deletion result shape, which carries only the id of the row that went. */
+function deferDeletion() {
+  const settlers: ((result: ActionResult<{ id: string }>) => void)[] = [];
+  deleteApplication.mockImplementation(
+    () =>
+      new Promise<ActionResult<{ id: string }>>((resolve) => {
+        settlers.push(resolve);
+      }),
+  );
+  return settlers;
+}
+
+const idsOf = (cards: readonly JobApplication[]) => cards.map((card) => card.id);
+
 beforeEach(() => {
   updateApplicationStatus.mockReset();
+  deleteApplication.mockReset();
 });
 
 afterEach(() => {
@@ -88,12 +104,12 @@ describe("useBoardCards", () => {
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
     });
-    await waitFor(() => expect(result.current.isMovePending("a")).toBe(true));
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(true));
 
     await act(async () => {
       settlers[0]?.({ ok: true, data: application("a", ApplicationStatus.OFFER) });
     });
-    expect(result.current.isMovePending("a")).toBe(false);
+    expect(result.current.isCardBusy("a")).toBe(false);
   });
 
   it("keeps a first card held when a second card is moved before it settles", async () => {
@@ -106,25 +122,25 @@ describe("useBoardCards", () => {
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
     });
-    await waitFor(() => expect(result.current.isMovePending("a")).toBe(true));
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(true));
 
     act(() => {
       result.current.moveCard(moveOf("b", ApplicationStatus.WISHLIST, ApplicationStatus.APPLIED));
     });
-    await waitFor(() => expect(result.current.isMovePending("b")).toBe(true));
-    expect(result.current.isMovePending("a")).toBe(true);
+    await waitFor(() => expect(result.current.isCardBusy("b")).toBe(true));
+    expect(result.current.isCardBusy("a")).toBe(true);
 
     // Settling the second write must not release the first.
     await act(async () => {
       settlers[1]?.({ ok: true, data: application("b", ApplicationStatus.APPLIED) });
     });
-    expect(result.current.isMovePending("b")).toBe(false);
-    expect(result.current.isMovePending("a")).toBe(true);
+    expect(result.current.isCardBusy("b")).toBe(false);
+    expect(result.current.isCardBusy("a")).toBe(true);
 
     await act(async () => {
       settlers[0]?.({ ok: true, data: application("a", ApplicationStatus.OFFER) });
     });
-    expect(result.current.isMovePending("a")).toBe(false);
+    expect(result.current.isCardBusy("a")).toBe(false);
   });
 
   it("drops the optimistic move and reports the failure when the write fails", async () => {
@@ -134,7 +150,7 @@ describe("useBoardCards", () => {
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
     });
-    await waitFor(() => expect(result.current.isMovePending("a")).toBe(true));
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(true));
 
     await act(async () => {
       settlers[0]?.({ ok: false, error: "Application not found" });
@@ -144,7 +160,7 @@ describe("useBoardCards", () => {
     expect(result.current.shown.find((item) => item.id === "a")?.status).toBe(
       ApplicationStatus.APPLIED,
     );
-    expect(result.current.isMovePending("a")).toBe(false);
+    expect(result.current.isCardBusy("a")).toBe(false);
   });
 
   it("clears an earlier failure when a new move starts", async () => {
@@ -200,7 +216,7 @@ describe("useBoardCards when the write does not settle into a result", () => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
     });
 
-    await waitFor(() => expect(result.current.isMovePending("a")).toBe(false));
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(false));
     // The exact string, and the same constant the action returns, so the two
     // readers of it cannot drift apart.
     expect(result.current.error).toBe(FAILED.move);
@@ -219,4 +235,170 @@ describe("useBoardCards when the write does not settle into a result", () => {
   // places the behaviour actually lives - isMovePending going back to false
   // above, and ApplicationCard enabling the handle when it does, which its own
   // tests cover.
+});
+
+describe("useBoardCards: deleting a card", () => {
+  it("takes the card off the board before the server has confirmed it", async () => {
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+
+    await waitFor(() => expect(idsOf(result.current.shown)).toEqual(["b"]));
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: { id: "a" } });
+    });
+  });
+
+  it("holds the card while its deletion is outstanding and releases it after", async () => {
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(true));
+    // The requirement is that one confirmation cannot become two writes, and
+    // that the rest of the board is unaffected while it is in flight.
+    expect(result.current.isCardBusy("b")).toBe(false);
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: { id: "a" } });
+    });
+    expect(result.current.isCardBusy("a")).toBe(false);
+  });
+
+  it("puts the card back and reports the failure when the deletion fails", async () => {
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await waitFor(() => expect(idsOf(result.current.shown)).toEqual(["b"]));
+
+    await act(async () => {
+      settlers[0]?.({ ok: false, error: FAILED.remove });
+    });
+
+    expect(result.current.error).toBe(FAILED.remove);
+    // Still stored, so the card is the truthful thing to show.
+    expect(idsOf(result.current.shown)).toEqual(["a", "b"]);
+    expect(result.current.isCardBusy("a")).toBe(false);
+  });
+
+  it("reports a missing application without restoring its card", async () => {
+    // The one failure where the optimistic removal was right: no column is the
+    // truthful place for an application that is gone. The server list is what
+    // puts it back, so the hook must not do it - and the action revalidates on
+    // that branch, which is what makes the list arrive without a reload.
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await act(async () => {
+      settlers[0]?.({ ok: false, error: "Application not found" });
+    });
+
+    expect(result.current.error).toBe("Application not found");
+    expect(idsOf(result.current.shown)).toEqual(["a", "b"]);
+  });
+
+  it("releases the card and reports the failure when the deletion rejects", async () => {
+    deleteApplication.mockRejectedValue(new Error("database is locked"));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(false));
+    expect(result.current.error).toBe(FAILED.remove);
+    expect(idsOf(result.current.shown)).toEqual(["a", "b"]);
+  });
+
+  it("clears an earlier failure when a new deletion starts", async () => {
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await act(async () => {
+      settlers[0]?.({ ok: false, error: FAILED.remove });
+    });
+    expect(result.current.error).toBe(FAILED.remove);
+
+    act(() => {
+      result.current.removeCard("b");
+    });
+    await waitFor(() => expect(result.current.error).toBeNull());
+
+    await act(async () => {
+      settlers[1]?.({ ok: true, data: { id: "b" } });
+    });
+  });
+
+  it("calls the server action once per deletion, with the card id", async () => {
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await waitFor(() => expect(deleteApplication).toHaveBeenCalledTimes(1));
+    expect(deleteApplication).toHaveBeenCalledWith("a");
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: { id: "a" } });
+    });
+  });
+});
+
+describe("useBoardCards: a move and a deletion of the same card", () => {
+  it("does not let the move resurrect a card the deletion has taken off", async () => {
+    // Two useOptimistic calls over the same server list would give two answers
+    // to "what does the board show" here. One reducer makes this a sequence of
+    // changes over one list instead, so the later change wins whichever write
+    // settles first.
+    const moves = deferAction();
+    const deletions = deferDeletion();
+    const { result, rerender } = renderHook(
+      ({ cards }: { cards: JobApplication[] }) => useBoardCards(cards),
+      { initialProps: { cards: APPLICATIONS } },
+    );
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+    await waitFor(() => expect(result.current.isCardBusy("a")).toBe(true));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await waitFor(() => expect(idsOf(result.current.shown)).toEqual(["b"]));
+
+    // The move settles while the deletion is still in flight. Its optimistic
+    // change is the older of the two, so it must not put the card back.
+    await act(async () => {
+      moves[0]?.({ ok: true, data: application("a", ApplicationStatus.OFFER) });
+    });
+    expect(idsOf(result.current.shown)).toEqual(["b"]);
+
+    // Then the deletion settles and the server list arrives without the row -
+    // which is what revalidatePath on the action delivers in the real board.
+    await act(async () => {
+      deletions[0]?.({ ok: true, data: { id: "a" } });
+    });
+    rerender({ cards: [APPLICATIONS[1] as JobApplication] });
+
+    expect(idsOf(result.current.shown)).toEqual(["b"]);
+    expect(result.current.isCardBusy("a")).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
 });

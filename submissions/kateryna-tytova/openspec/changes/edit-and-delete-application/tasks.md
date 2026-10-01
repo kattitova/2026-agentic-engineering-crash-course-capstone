@@ -23,34 +23,36 @@ e2e run in 7.5, not by a unit test.
 
 ## 2. The write path: what it writes, and what it says when the row is gone
 
-- [ ] 2.1 Write a failing test (red) asserting that `updateApplication` passes Prisma exactly
-      `{ company, position, link, notes }` as `data` — no `status`, no `appliedDate`, no
-      `statusChangedAt` — and verify it fails before any change
-- [ ] 2.2 Make 2.1 pass, and verify the test now asserts the guarantee behind "An edit does not move
-      the card or restart its status clock" at the only place those fields could be written
-- [ ] 2.3 Write failing tests (red) asserting that `updateApplication` and `deleteApplication` call
+- [x] 2.1 Pin that `updateApplication` passes Prisma exactly `{ company, position, link, notes }` as
+      `data` — no `status`, no `appliedDate`, no `statusChangedAt`. Verify the test asserts the key
+      set, not only the values. **Not red-first, and it cannot be:** `data` is whatever
+      `validateApplicationInput` returned, which is exactly those four fields, so the guarantee
+      already holds by construction and the test is a regression guard. `AGENTS.md` asks red-first
+      for new business logic; this is pre-existing logic being pinned
+- [x] 2.2 Covered by 2.1 — there is no separate green step, because there was no red
+- [x] 2.3 Write failing tests (red) asserting that `updateApplication` and `deleteApplication` call
       `revalidatePath` on their not-found branch, and verify both fail before the actions change
-- [ ] 2.4 Add `revalidatePath(BOARD_PATH)` to the not-found branch of both actions, matching
+- [x] 2.4 Add `revalidatePath(BOARD_PATH)` to the not-found branch of both actions, matching
       `updateApplicationStatus`, and verify the tests from 2.3 pass
-- [ ] 2.5 Write failing tests (red) for `updateApplicationFromForm(prevState, formData)`: a valid
+- [x] 2.5 Write failing tests (red) for `updateApplicationFromForm(prevState, formData)`: a valid
       edit reaches `updateApplication` with the form's values and the hidden id; a refused edit comes
       back with field errors and writes nothing; a missing, empty or non-string id returns
       `INVALID_ID`; an application that no longer exists comes back as not found and **not** as the
       unclassifiable-failure message
-- [ ] 2.6 Add `updateApplicationFromForm` reading `id`, `company`, `position`, `link` and `notes`
+- [x] 2.6 Add `updateApplicationFromForm` reading `id`, `company`, `position`, `link` and `notes`
       from the form data, and verify the tests from 2.5 pass
 
 ## 3. One optimistic list for moves and deletions
 
-- [ ] 3.1 Write failing tests (red) in `useBoardCards.test.ts` for the deletion path: a confirmed
+- [x] 3.1 Write failing tests (red) in `useBoardCards.test.ts` for the deletion path: a confirmed
       deletion removes the card from `shown`; a failed deletion restores it and sets `error`; a
       not-found deletion sets the not-found message and does **not** restore the card; the card is
       held while its deletion is in flight and other cards are not; a later success clears `error`
-- [ ] 3.2 Introduce the `BoardChange` discriminated change and the single reducer over
+- [x] 3.2 Introduce the `BoardChange` discriminated change and the single reducer over
       `useOptimistic` (`move` re-statuses, `remove` filters out), add `removeCard`, rename the
       predicate `isMovePending` to `isCardBusy`, and verify the tests from 3.1 and every existing
       move test pass
-- [ ] 3.3 Write a test that issues a move and a deletion of the same card in one session, and verify
+- [x] 3.3 Write a test that issues a move and a deletion of the same card in one session, and verify
       `shown` and the pending set are left consistent and no card is resurrected
 
 ## 4. The form serves editing
