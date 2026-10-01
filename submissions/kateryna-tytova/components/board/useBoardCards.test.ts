@@ -5,7 +5,7 @@ import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
 import { FAILED, type ActionResult } from "@/lib/applications/action-result";
 import type { CardMove } from "@/lib/applications/move";
-import { useCardMoves } from "./useCardMoves";
+import { useBoardCards } from "./useBoardCards";
 
 const { updateApplicationStatus } = vi.hoisted(() => ({
   updateApplicationStatus: vi.fn(),
@@ -61,10 +61,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("useCardMoves", () => {
+describe("useBoardCards", () => {
   it("shows the move before the server has confirmed it", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -83,7 +83,7 @@ describe("useCardMoves", () => {
 
   it("holds the moved card while its write is outstanding and releases it after", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -101,7 +101,7 @@ describe("useCardMoves", () => {
     // second drag re-enable the first card's handle while its write is still
     // outstanding, which is exactly the ordering the spec forbids.
     const settlers = deferAction();
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -129,7 +129,7 @@ describe("useCardMoves", () => {
 
   it("drops the optimistic move and reports the failure when the write fails", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -149,7 +149,7 @@ describe("useCardMoves", () => {
 
   it("clears an earlier failure when a new move starts", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -171,7 +171,7 @@ describe("useCardMoves", () => {
 
   it("calls the server action once per move, with the card and its new status", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -185,7 +185,7 @@ describe("useCardMoves", () => {
   });
 });
 
-describe("useCardMoves when the write does not settle into a result", () => {
+describe("useBoardCards when the write does not settle into a result", () => {
   it("releases the card and reports the failure", async () => {
     // The action is typed to return ActionResult, but nothing made that true:
     // updateApplicationStatus had no try/catch at all, so a locked database was
@@ -194,7 +194,7 @@ describe("useCardMoves when the write does not settle into a result", () => {
     // the half that survives even a recovery: pending is released on the line
     // after the await, which a rejection never reaches.
     updateApplicationStatus.mockRejectedValue(new Error("database is locked"));
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));

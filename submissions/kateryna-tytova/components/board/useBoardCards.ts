@@ -6,7 +6,7 @@ import type { JobApplication } from "@/app/generated/prisma/client";
 import { FAILED } from "@/lib/applications/action-result";
 import type { CardMove } from "@/lib/applications/move";
 
-export interface CardMoves {
+export interface BoardCards {
   /** The board as the person should see it right now, optimistic move included. */
   shown: JobApplication[];
   /** True while that one card's write is outstanding. */
@@ -29,7 +29,7 @@ function applyMove(applications: JobApplication[], move: CardMove): JobApplicati
  * layout — so none of this would be testable if it lived in the component. Here
  * it is reachable with the action mocked.
  */
-export function useCardMoves(applications: JobApplication[]): CardMoves {
+export function useBoardCards(applications: JobApplication[]): BoardCards {
   // Derived from the server list each render, so once revalidation lands the
   // stored data wins by construction rather than by manual reconciliation.
   const [shown, addOptimisticMove] = useOptimistic(applications, applyMove);

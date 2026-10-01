@@ -21,7 +21,7 @@ import {
 } from "@/lib/applications/move";
 import { isApplicationStatus } from "@/lib/applications/status";
 import { BoardColumn } from "./BoardColumn";
-import { useCardMoves } from "./useCardMoves";
+import { useBoardCards } from "./useBoardCards";
 
 /**
  * Moves a picked-up card to the adjacent column instead of dnd-kit's default
@@ -74,7 +74,7 @@ const columnCoordinateGetter: KeyboardCoordinateGetter = (
 };
 
 export function Board({ applications }: { applications: JobApplication[] }) {
-  const { shown, isMovePending, error, moveCard } = useCardMoves(applications);
+  const { shown, isMovePending, error, moveCard } = useBoardCards(applications);
   // Only set for a keyboard move: after a pointer drag the person's attention is
   // already where they dropped the card, and focusing would show a ring they
   // did not ask for.
