@@ -44,16 +44,30 @@ export function useCardMoves(applications: JobApplication[]): CardMoves {
 
     startTransition(async () => {
       addOptimisticMove(move);
-      const result = await updateApplicationStatus(move.cardId, move.to);
-      if (!result.ok) {
-        setError(result.error);
+      try {
+        const result = await updateApplicationStatus(move.cardId, move.to);
+        if (!result.ok) {
+          setError(result.error);
+        }
+      } catch (error) {
+        // The action is typed never to reject, and since this change it does
+        // not. This is here because the cost of being wrong about that is the
+        // whole board: an unhandled rejection in a transition reaches the
+        // nearest error boundary, which replaces the page. The text is a copy
+        // of the action's rather than an import, because a "use server" file
+        // can only export async functions.
+        console.error(error);
+        setError("The move was not saved. Please try again.");
+      } finally {
+        // Release only this card, and whatever happened. Another card's write
+        // may still be outstanding, and a release that sits after the await is
+        // one a failure never reaches - which left the card held for good.
+        setPending((current) => {
+          const next = new Set(current);
+          next.delete(move.cardId);
+          return next;
+        });
       }
-      // Release only this card. Another card's write may still be outstanding.
-      setPending((current) => {
-        const next = new Set(current);
-        next.delete(move.cardId);
-        return next;
-      });
     });
   }, [addOptimisticMove]);
 

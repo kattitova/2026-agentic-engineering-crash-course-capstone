@@ -33,12 +33,12 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 
 ## 3. Leave the board usable
 
-- [ ] 3.1 Move the release of the pending card in `useCardMoves` into a `finally`, and verify the
+- [x] 3.1 Move the release of the pending card in `useCardMoves` into a `finally`, and verify the
       red test from 1.1 passes
-- [ ] 3.2 Verify the card can be moved again after a failed move, with a test that moves the same
+- [x] 3.2 Verify the card can be moved again after a failed move, with a test that moves the same
       card twice and asserts the second attempt reaches the action — the scenario the delta spec
       adds, and the half of the defect that a returned result alone does not fix
-- [ ] 3.3 Verify by mutation that 3.1 is load-bearing: restore the release to its old position and
+- [x] 3.3 Verify by mutation that 3.1 is load-bearing: restore the release to its old position and
       confirm 1.1 and 3.2 fail, then put it back
 
 ## 4. Let Next's own throws through
