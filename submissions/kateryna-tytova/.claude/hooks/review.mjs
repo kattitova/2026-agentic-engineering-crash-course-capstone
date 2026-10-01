@@ -37,11 +37,16 @@ const prompt =
   `the mode first, read docs/reviews/decisions.md and the previous reviews before raising ` +
   `anything, and write the result to its own file under docs/reviews/ with an explicit verdict.`;
 
-// The reviewer's window is interactive on purpose: it will ask for permission for the commands it
-// runs, and those prompts are worth seeing. Its own frontmatter already limits which tools it has.
+// Auto mode, so the review runs without stopping to confirm each read, git command and test run.
+// The permission prompts it replaces were the only HARD stop on a reviewer editing code — its
+// "never fix anything" rule is a prompt-level contract, not an enforced one — so reviewer-settings
+// .json denies writes to every source, spec and config path, and denies the git and install
+// commands a reviewer has no business running. Deny rules outrank auto mode, so what is left is
+// exactly the review's own output: docs/reviews/ and the index.
+const settings = join(root, ".claude", "reviewer-settings.json");
 const claudeArgs = background
-  ? ["--agent", "reviewer", "--bg", "-p", prompt]
-  : ["--agent", "reviewer", prompt];
+  ? ["--agent", "reviewer", "--settings", settings, "--permission-mode", "auto", "--bg", "-p", prompt]
+  : ["--agent", "reviewer", "--settings", settings, "--permission-mode", "auto", prompt];
 
 if (background) {
   const child = spawn("claude", claudeArgs, { cwd: root, stdio: "inherit", shell: true });

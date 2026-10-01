@@ -6,10 +6,13 @@
 // active change under openspec/changes/ has at least one `- [x]` and no `- [ ]` left, the change
 // is implemented and ready for an independent review pass.
 //
-// The hook itself never launches anything: an automatic review would spend a full pass without
-// being asked for. It tells the user (systemMessage) and tells the agent (additionalContext) to
-// OFFER the review, so agreeing in one word is enough and the launch still needs a human yes.
-// Either way the reviewer runs as a separate cold process (see .claude/hooks/review.mjs).
+// The hook itself never launches anything. It tells the user (systemMessage) and the agent
+// (additionalContext) to do two things in order: run `opsx:verify`, which is cheap, runs in this
+// session and answers "is this change finished and coherent enough to archive"; then OFFER the
+// independent review, which is expensive, runs as a separate cold process and answers "is this
+// code correct". Verify first so a missed checkbox or a requirement with no code is caught before
+// a full review pass is spent on it. Agreeing in one word is enough; the launch still needs a
+// human yes (see .claude/hooks/review.mjs).
 //
 // Announced once per change per task-set signature, tracked in .agent-log/review-ready.json, so
 // editing the file again stays quiet — but adding new tasks and finishing those announces again.
@@ -90,23 +93,34 @@ const names = ready.map(({ change }) => change);
 const systemMessage = ready
   .map(
     ({ change, done }) =>
-      `${change}: all ${done} tasks complete — ready for an independent review pass.\n` +
-      `  If you would rather start it yourself:  node .claude/hooks/review.mjs ${change}`,
+      `${change}: all ${done} tasks complete.\n` +
+      `  Next:  /opsx:verify ${change}  — then, if you want it:  node .claude/hooks/review.mjs ${change}`,
   )
   .join("\n");
 
-// Given to the model so the user can simply agree instead of typing the command. The wording is
+// Given to the model so the user can simply agree instead of typing the commands. The wording is
 // deliberately restrictive: this session implemented the change, so it must not review its own
 // work, and it must not spend a review pass without being told to.
 const additionalContext =
-  `Every task is now complete for: ${names.join(", ")}. ` +
-  `Finish reporting the implementation first, then offer the user an independent review pass in ` +
-  `one short line and stop for their answer. Do NOT launch it on your own initiative, and do NOT ` +
-  `review the change yourself in this session — you are the maker here, and the project requires ` +
-  `maker != checker. If the user agrees, run ` +
+  `Every task is now complete for: ${names.join(", ")}. Finish reporting the implementation ` +
+  `first, then do these two steps in order.\n` +
+  `STEP 1 — run the \`opsx:verify\` skill (also listed as \`openspec-verify-change\`) for ` +
+  `${names.join(" and ")} without asking first: it is cheap, it runs in this session, and it ` +
+  `answers whether the change is finished and coherent enough to archive — unchecked tasks, a ` +
+  `requirement with no code behind it, an implementation that contradicts design.md. Report its ` +
+  `scorecard in its own vocabulary (CRITICAL / WARNING / SUGGESTION); those words do not mean ` +
+  `what the reviewer's severities mean, so do not translate between the two scales.\n` +
+  `STEP 2 — then offer the user an independent review pass in one short line and stop for their ` +
+  `answer. If verify reported any CRITICAL issue, say plainly that fixing it first is the better ` +
+  `order, because a full review pass spent on an unfinished change is wasted — but still let the ` +
+  `user decide, and launch it if they ask. If the user agrees, run ` +
   names.map((c) => `\`node .claude/hooks/review.mjs ${c}\``).join(" and ") +
   ` via Bash. That opens the reviewer as a separate session with its own cold context, which is ` +
-  `the point; do not substitute an in-session subagent unless the user asks for one.`;
+  `the point; do not substitute an in-session subagent unless the user asks for one.\n` +
+  `Throughout: do NOT launch the review on your own initiative, and do NOT review the change ` +
+  `yourself in this session — you are the maker here, and the project requires maker != checker. ` +
+  `Verify is not a review and does not replace one; a clean verify says the change is complete, ` +
+  `not that the code is correct.`;
 
 process.stdout.write(
   JSON.stringify({
