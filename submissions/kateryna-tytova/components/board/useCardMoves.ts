@@ -3,6 +3,7 @@
 import { useCallback, useOptimistic, useState, useTransition } from "react";
 import { updateApplicationStatus } from "@/app/actions/applications";
 import type { JobApplication } from "@/app/generated/prisma/client";
+import { FAILED } from "@/lib/applications/action-result";
 import type { CardMove } from "@/lib/applications/move";
 
 export interface CardMoves {
@@ -53,11 +54,9 @@ export function useCardMoves(applications: JobApplication[]): CardMoves {
         // The action is typed never to reject, and since this change it does
         // not. This is here because the cost of being wrong about that is the
         // whole board: an unhandled rejection in a transition reaches the
-        // nearest error boundary, which replaces the page. The text is a copy
-        // of the action's rather than an import, because a "use server" file
-        // can only export async functions.
+        // nearest error boundary, which replaces the page.
         console.error(error);
-        setError("The move was not saved. Please try again.");
+        setError(FAILED.move);
       } finally {
         // Release only this card, and whatever happened. Another card's write
         // may still be outstanding, and a release that sits after the await is

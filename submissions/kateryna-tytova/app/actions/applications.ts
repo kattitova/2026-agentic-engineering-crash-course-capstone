@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { Prisma, type JobApplication } from "@/app/generated/prisma/client";
-import type { ActionResult, ActionState } from "@/lib/applications/action-result";
+import { FAILED, type ActionResult, type ActionState } from "@/lib/applications/action-result";
 import { isApplicationStatus, planStatusChange } from "@/lib/applications/status";
 import {
   validateApplicationInput,
@@ -15,19 +15,6 @@ const BOARD_PATH = "/";
 
 const NOT_FOUND = { ok: false, error: "Application not found" } as const;
 const INVALID_ID = { ok: false, error: "Invalid application id" } as const;
-
-/**
- * What an action says when the storage fails for a reason it cannot classify.
- *
- * The underlying message is never passed on: a driver's text is not written for
- * the person reading it, and it can carry a file path or a connection string.
- */
-const FAILED = {
-  create: "The application was not added. Please try again.",
-  move: "The move was not saved. Please try again.",
-  update: "The application was not updated. Please try again.",
-  remove: "The application was not deleted. Please try again.",
-} as const;
 
 /**
  * Turns an unclassified failure into a result, so ActionResult means what its

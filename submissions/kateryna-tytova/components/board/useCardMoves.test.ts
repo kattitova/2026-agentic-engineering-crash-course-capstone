@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
-import type { ActionResult } from "@/lib/applications/action-result";
+import { FAILED, type ActionResult } from "@/lib/applications/action-result";
 import type { CardMove } from "@/lib/applications/move";
 import { useCardMoves } from "./useCardMoves";
 
@@ -201,7 +201,9 @@ describe("useCardMoves when the write does not settle into a result", () => {
     });
 
     await waitFor(() => expect(result.current.isMovePending("a")).toBe(false));
-    expect(result.current.error).not.toBeNull();
+    // The exact string, and the same constant the action returns, so the two
+    // readers of it cannot drift apart.
+    expect(result.current.error).toBe(FAILED.move);
     // The same assertion the ok:false test makes, because the requirement says
     // this case behaves "exactly as for a failure the storage does describe" -
     // and the card returning is the half of that a message does not prove.
@@ -210,19 +212,11 @@ describe("useCardMoves when the write does not settle into a result", () => {
     );
   });
 
-  it("lets the same card be moved again after a failed move", async () => {
-    updateApplicationStatus.mockRejectedValue(new Error("database is locked"));
-    const { result } = renderHook(() => useCardMoves(APPLICATIONS));
-
-    act(() => {
-      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
-    });
-    await waitFor(() => expect(result.current.isMovePending("a")).toBe(false));
-
-    act(() => {
-      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
-    });
-
-    await waitFor(() => expect(updateApplicationStatus).toHaveBeenCalledTimes(2));
-  });
+  // There is no third test here for "a card can be moved again after a failed
+  // move". One was written and removed: moveCard has no pending guard, so a
+  // second call reaches the action whether or not the card was released, and
+  // toHaveBeenCalledTimes(2) held either way. The scenario is pinned in the two
+  // places the behaviour actually lives - isMovePending going back to false
+  // above, and ApplicationCard enabling the handle when it does, which its own
+  // tests cover.
 });
