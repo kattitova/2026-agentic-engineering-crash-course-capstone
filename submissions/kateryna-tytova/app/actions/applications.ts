@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { Prisma, type JobApplication } from "@/app/generated/prisma/client";
 import type { ActionResult, ActionState } from "@/lib/applications/action-result";
 import { isApplicationStatus, planStatusChange } from "@/lib/applications/status";
@@ -41,6 +42,10 @@ const FAILED = {
  * what happened.
  */
 function failed(where: keyof typeof FAILED, error: unknown) {
+  // First, because Next signals redirect(), notFound(), forbidden() and
+  // unauthorized() by throwing. Swallowed, the redirect simply never happens
+  // and this returns a failure for a write that succeeded.
+  unstable_rethrow(error);
   // Swallowing this would trade a visible crash for an invisible one.
   console.error(error);
   return { ok: false, error: FAILED[where] } as const;

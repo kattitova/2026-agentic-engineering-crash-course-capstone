@@ -43,12 +43,12 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 
 ## 4. Let Next's own throws through
 
-- [ ] 4.1 Write a failing test that an action which throws a Next control-flow error — the shape
+- [x] 4.1 Write a failing test that an action which throws a Next control-flow error — the shape
       `redirect()` produces — rejects rather than returning `{ ok: false }`. Verify it fails against
       the catch-alls from group 2, which is the trap being guarded (red step)
-- [ ] 4.2 Add `unstable_rethrow(error)` as the first line of every catch, and verify the test passes
+- [x] 4.2 Add `unstable_rethrow(error)` as the first line of every catch, and verify the test passes
       and all four unclassified-failure tests from 1.2 still do
-- [ ] 4.3 Verify the guard is load-bearing by mutation: remove one `unstable_rethrow` and confirm
+- [x] 4.3 Verify the guard is load-bearing by mutation: remove one `unstable_rethrow` and confirm
       4.1 fails, then put it back
 
 ## 5. Remove what the guarantee makes dead
