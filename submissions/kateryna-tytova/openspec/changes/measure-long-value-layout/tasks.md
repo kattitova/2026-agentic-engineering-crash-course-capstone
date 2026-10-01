@@ -45,7 +45,10 @@ convention this project already uses for that case.
 ## 4. Leave the database as it was found
 
 - [x] 4.1 Verify `resetBoard` removes the inserted row, by running the whole suite twice in a row
-      against one already-seeded database with no reseed between, and confirming both runs pass
+      against one already-seeded database with no reseed between, and confirming both runs pass.
+      It did — but only because `move-card` sorts after this file and its `beforeEach` did the
+      cleaning. Running this file alone left `e2e-long-value` behind. `test.afterAll(resetBoard)`
+      added, matching `add-application.spec.ts`, so the property does not depend on file order
 - [x] 4.2 Verify the seeded rows are unchanged after a run, by comparing the ids, companies and
       statuses in `e2e.db` before and after
 

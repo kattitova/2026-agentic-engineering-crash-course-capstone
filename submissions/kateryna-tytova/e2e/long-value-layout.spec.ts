@@ -22,6 +22,9 @@ async function columnWidths(page: Page): Promise<number[]> {
   for (const name of COLUMNS) {
     const box = await page.getByRole("region", { name }).boundingBox();
     expect(box, `column ${name} has no box`).not.toBeNull();
+    // Here rather than in one test, so neither caller can compare a pair of
+    // zeroes and read it as "the width did not change".
+    expect(box?.width ?? 0, `column ${name} is too narrow to be real`).toBeGreaterThan(100);
     widths.push(box?.width ?? 0);
   }
   return widths;
@@ -39,19 +42,23 @@ test.beforeEach(() => {
   resetBoard();
 });
 
+// Without this the inserted 200-character row outlives the file, and whether it
+// is cleaned up depends on another spec running afterwards - measured: running
+// this file alone leaves e2e-long-value in the database.
+test.afterAll(() => {
+  resetBoard();
+});
+
 test("the board starts with equal columns and no sideways scroll", async ({ page }) => {
   // The control for the long-value test below. A before-and-after comparison
   // passes when both are equally wrong, so the "before" has to be asserted in
   // its own right or "unchanged" means nothing.
   await page.goto("/");
 
+  // columnWidths asserts each is a real width, so a selector that matched
+  // nothing cannot read as five equal columns.
   const widths = await columnWidths(page);
 
-  // Not zero and not undefined: a selector that matched nothing would otherwise
-  // read as five equal widths and pass.
-  for (const [index, width] of widths.entries()) {
-    expect(width, `column ${COLUMNS[index]} is too narrow to be real`).toBeGreaterThan(100);
-  }
   for (const width of widths) {
     expect(Math.abs(width - (widths[0] ?? 0))).toBeLessThanOrEqual(TOLERANCE);
   }
