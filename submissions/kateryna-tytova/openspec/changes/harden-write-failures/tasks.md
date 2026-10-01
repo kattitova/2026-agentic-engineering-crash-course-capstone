@@ -17,18 +17,18 @@ history rather than asserted here. A red commit fails `npm run verify` by design
 
 ## 2. Make the actions keep the promise `ActionResult` makes
 
-- [ ] 2.1 Add a catch-all to `createApplication` returning `{ ok: false, error }`, and verify its
+- [x] 2.1 Add a catch-all to `createApplication` returning `{ ok: false, error }`, and verify its
       existing tests are untouched and still pass
-- [ ] 2.2 Add one to `updateApplicationStatus` around the transaction, and verify the "application
+- [x] 2.2 Add one to `updateApplicationStatus` around the transaction, and verify the "application
       not found" branch still returns `NOT_FOUND` and still revalidates
-- [ ] 2.3 Replace the `throw error` in `updateApplication` and in `deleteApplication` with the same
+- [x] 2.3 Replace the `throw error` in `updateApplication` and in `deleteApplication` with the same
       catch-all, and verify `isRecordNotFound` still wins for `P2025` so the specific message is not
       swallowed by the general one
-- [ ] 2.4 Verify each action returns the exact message `design.md` fixes for it, asserting the whole
+- [x] 2.4 Verify each action returns the exact message `design.md` fixes for it, asserting the whole
       string rather than a substring, so the underlying error's text cannot leak into it. For
       `createApplication` the string is already pinned by `app/actions/applications.test.ts`; verify
       that existing assertion passes unchanged rather than writing a second one beside it
-- [ ] 2.5 Add `console.error` for the caught error, and verify the four new tests pass and nothing
+- [x] 2.5 Add `console.error` for the caught error, and verify the four new tests pass and nothing
       that passed before now fails
 
 ## 3. Leave the board usable

@@ -15,6 +15,37 @@ const BOARD_PATH = "/";
 const NOT_FOUND = { ok: false, error: "Application not found" } as const;
 const INVALID_ID = { ok: false, error: "Invalid application id" } as const;
 
+/**
+ * What an action says when the storage fails for a reason it cannot classify.
+ *
+ * The underlying message is never passed on: a driver's text is not written for
+ * the person reading it, and it can carry a file path or a connection string.
+ */
+const FAILED = {
+  create: "The application was not added. Please try again.",
+  move: "The move was not saved. Please try again.",
+  update: "The application was not updated. Please try again.",
+  remove: "The application was not deleted. Please try again.",
+} as const;
+
+/**
+ * Turns an unclassified failure into a result, so ActionResult means what its
+ * type says: an action settles, it never rejects. A rejection is not a failure
+ * a caller can report - React rethrows it during render and app/error.tsx
+ * replaces the page, which is how a failed write came to be announced as a
+ * failed read.
+ *
+ * Each `try` encloses the storage call and nothing else. revalidatePath stays
+ * outside it: a cache call that failed after the row was written is a bug, and
+ * reporting it as "the application was not added" would say the opposite of
+ * what happened.
+ */
+function failed(where: keyof typeof FAILED, error: unknown) {
+  // Swallowing this would trade a visible crash for an invisible one.
+  console.error(error);
+  return { ok: false, error: FAILED[where] } as const;
+}
+
 // Server actions are public endpoints: TypeScript types don't guard runtime input.
 function isValidId(id: unknown): id is string {
   return typeof id === "string" && id.length > 0;
@@ -32,7 +63,13 @@ export async function createApplication(
     return { ok: false, error: "Invalid application data", fieldErrors: validation.errors };
   }
 
-  const application = await prisma.jobApplication.create({ data: validation.data });
+  let application;
+  try {
+    application = await prisma.jobApplication.create({ data: validation.data });
+  } catch (error) {
+    return failed("create", error);
+  }
+
   revalidatePath(BOARD_PATH);
   return { ok: true, data: application };
 }
@@ -78,15 +115,20 @@ export async function updateApplicationStatus(
     return { ok: false, error: "Unknown status" };
   }
 
-  // Read and write in one transaction so appliedDate is decided on fresh data.
-  const application = await prisma.$transaction(async (tx) => {
-    const current = await tx.jobApplication.findUnique({ where: { id } });
-    if (!current) {
-      return null;
-    }
-    const change = planStatusChange(current, status, new Date());
-    return change ? tx.jobApplication.update({ where: { id }, data: change }) : current;
-  });
+  let application;
+  try {
+    // Read and write in one transaction so appliedDate is decided on fresh data.
+    application = await prisma.$transaction(async (tx) => {
+      const current = await tx.jobApplication.findUnique({ where: { id } });
+      if (!current) {
+        return null;
+      }
+      const change = planStatusChange(current, status, new Date());
+      return change ? tx.jobApplication.update({ where: { id }, data: change }) : current;
+    });
+  } catch (error) {
+    return failed("move", error);
+  }
 
   if (!application) {
     // Revalidate on this branch too: the board is optimistically showing a card
@@ -111,19 +153,18 @@ export async function updateApplication(
     return { ok: false, error: "Invalid application data", fieldErrors: validation.errors };
   }
 
+  let application;
   try {
-    const application = await prisma.jobApplication.update({
-      where: { id },
-      data: validation.data,
-    });
-    revalidatePath(BOARD_PATH);
-    return { ok: true, data: application };
+    application = await prisma.jobApplication.update({ where: { id }, data: validation.data });
   } catch (error) {
     if (isRecordNotFound(error)) {
       return NOT_FOUND;
     }
-    throw error;
+    return failed("update", error);
   }
+
+  revalidatePath(BOARD_PATH);
+  return { ok: true, data: application };
 }
 
 export async function deleteApplication(id: string): Promise<ActionResult<{ id: string }>> {
@@ -133,12 +174,13 @@ export async function deleteApplication(id: string): Promise<ActionResult<{ id: 
 
   try {
     await prisma.jobApplication.delete({ where: { id } });
-    revalidatePath(BOARD_PATH);
-    return { ok: true, data: { id } };
   } catch (error) {
     if (isRecordNotFound(error)) {
       return NOT_FOUND;
     }
-    throw error;
+    return failed("remove", error);
   }
+
+  revalidatePath(BOARD_PATH);
+  return { ok: true, data: { id } };
 }
