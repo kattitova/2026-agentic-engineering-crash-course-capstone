@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { redirect } from "next/navigation";
 import { Prisma } from "@/app/generated/prisma/client";
 
 const create = vi.fn();
@@ -172,5 +173,39 @@ describe("a failure the actions do classify keeps its own message", () => {
       error: "Invalid application id",
     });
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("Next's own control-flow throws are not swallowed", () => {
+  // redirect(), notFound() and their siblings signal by throwing. A catch-all
+  // that returns a result for them means the redirect silently never happens
+  // and the action reports a failure for a write that succeeded - the opposite
+  // of what happened. No action calls one today; MVP item 4 is where somebody
+  // adds a redirect after saving an edit, and they would have no way to see
+  // that the catch two screens down is what broke it.
+  //
+  // Measured rather than faked: outside a request redirect() throws an Error
+  // whose message is NEXT_REDIRECT and whose digest carries the target, and
+  // unstable_rethrow recognises exactly that.
+  const cases = [
+    { name: "createApplication", mock: () => create, call: () => createApplication(VALID) },
+    {
+      name: "updateApplicationStatus",
+      mock: () => transaction,
+      call: () => updateApplicationStatus("a", "OFFER"),
+    },
+    { name: "updateApplication", mock: () => update, call: () => updateApplication("a", VALID) },
+    { name: "deleteApplication", mock: () => remove, call: () => deleteApplication("a") },
+  ] as const;
+
+  it.each(cases)("$name lets a redirect through", async ({ mock, call }) => {
+    mock().mockImplementation(() => {
+      redirect("/elsewhere");
+    });
+
+    await expect(call()).rejects.toMatchObject({
+      message: "NEXT_REDIRECT",
+      digest: expect.stringContaining("NEXT_REDIRECT"),
+    });
   });
 });
