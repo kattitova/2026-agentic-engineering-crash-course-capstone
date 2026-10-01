@@ -83,20 +83,26 @@ export function Board({ applications }: { applications: JobApplication[] }) {
   const [focusCardId, setFocusCardId] = useState<string | null>(null);
   const clearFocusTarget = useCallback(() => setFocusCardId(null), []);
 
-  // Ids rather than the applications themselves, so each dialog follows the row
-  // as it is re-rendered: holding the object would leave the edit form seeded
-  // from a snapshot taken before a revalidation landed.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const byId = (id: string | null) => shown.find((card) => card.id === id) ?? null;
+  // The applications themselves, not their ids looked up in `shown`.
+  //
+  // Looking them up tied each dialog's open state to the row still being there,
+  // and the not-found branch of both actions revalidates the board - so the row
+  // left the list in the same breath as the result arrived, the dialog closed
+  // and the form was unmounted with its "Application not found" message still
+  // in it. The person saw a dialog close and a card vanish, which is what a
+  // save that worked looks like.
+  //
+  // Nothing is lost by holding the object: the form is keyed by the application
+  // and seeds its fields once per mount, so it never re-read the looked-up row
+  // anyway. A dialog now closes when the person closes it, which is the only
+  // thing that should close it.
+  const [editing, setEditing] = useState<JobApplication | null>(null);
+  const [deleting, setDeleting] = useState<JobApplication | null>(null);
 
-  const editing = byId(editingId);
-  const deleting = byId(deletingId);
-
-  const openEdit = useCallback((application: JobApplication) => setEditingId(application.id), []);
-  const closeEdit = useCallback(() => setEditingId(null), []);
-  const openDelete = useCallback((application: JobApplication) => setDeletingId(application.id), []);
-  const closeDelete = useCallback(() => setDeletingId(null), []);
+  const openEdit = useCallback((application: JobApplication) => setEditing(application), []);
+  const closeEdit = useCallback(() => setEditing(null), []);
+  const openDelete = useCallback((application: JobApplication) => setDeleting(application), []);
+  const closeDelete = useCallback(() => setDeleting(null), []);
 
   // Closed before the write is started, not after: the optimistic removal takes
   // the card off the board immediately, and a confirmation still naming it would
@@ -104,7 +110,7 @@ export function Board({ applications }: { applications: JobApplication[] }) {
   // message goes to the board's own region for exactly that reason.
   const confirmDelete = useCallback(
     (application: JobApplication) => {
-      setDeletingId(null);
+      setDeleting(null);
       removeCard(application.id);
     },
     [removeCard],
@@ -168,7 +174,7 @@ export function Board({ applications }: { applications: JobApplication[] }) {
             key={column.status}
             column={column}
             applications={grouped[column.status]}
-            isMovePending={isCardBusy}
+            isCardBusy={isCardBusy}
             focusCardId={focusCardId}
             onFocusRestored={clearFocusTarget}
             onEdit={openEdit}
@@ -182,9 +188,11 @@ export function Board({ applications }: { applications: JobApplication[] }) {
           inside a card would have to restore focus from a control that is about
           to be unmounted, which is exactly what a deleted card does. */}
       <ApplicationDialog open={editing !== null} application={editing} onClose={closeEdit} />
+      {/* No pending state to pass: the confirmation closes before the write
+          starts, so one confirmation cannot become two writes because the
+          control is gone, not because it is disabled. */}
       <ConfirmDeleteDialog
         application={deleting}
-        pending={deleting !== null && isCardBusy(deleting.id)}
         onConfirm={confirmDelete}
         onCancel={closeDelete}
       />

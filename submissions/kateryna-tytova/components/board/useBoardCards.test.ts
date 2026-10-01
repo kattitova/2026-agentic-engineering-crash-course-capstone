@@ -290,7 +290,7 @@ describe("useBoardCards: deleting a card", () => {
     expect(result.current.isCardBusy("a")).toBe(false);
   });
 
-  it("reports a missing application without restoring its card", async () => {
+  it("reports a missing application and leaves the server list to decide", async () => {
     // The one failure where the optimistic removal was right: no column is the
     // truthful place for an application that is gone. The server list is what
     // puts it back, so the hook must not do it - and the action revalidates on

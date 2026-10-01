@@ -97,7 +97,7 @@ describe("ApplicationCard", () => {
   });
 
   it("disables the move control while that card's move is being stored", () => {
-    render(<ApplicationCard application={application()} isMovePending />);
+    render(<ApplicationCard application={application()} isCardBusy />);
 
     expect(screen.getByRole("button", { name: /move Acme Cloud/i })).toBeDisabled();
   });
@@ -178,7 +178,7 @@ describe("ApplicationCard's edit and delete controls", () => {
     render(
       <ApplicationCard
         application={application({ company: "Acme Cloud" })}
-        isMovePending
+        isCardBusy
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />,

@@ -148,6 +148,36 @@ test("dismissing the edit form changes nothing", async ({ page }) => {
   await expect(page.getByText("Never saved")).toHaveCount(0);
 });
 
+test("says the application was not found when the row went while the form was open", async ({
+  page,
+}) => {
+  // The case a review pass found broken: the not-found branch revalidates the
+  // board, and while the dialog's open state was derived from the row still
+  // being in the list, that revalidation closed the form and took the message
+  // with it. The person saw a dialog close and a card vanish, which is exactly
+  // what a save that worked looks like.
+  await page.goto("/");
+  await openEdit(page, APPLIED.company);
+  await page.getByLabel("Company").fill("Saved into a row that is gone");
+
+  // Deleted behind the open form, as another tab or a direct edit would.
+  withDatabase((db) => {
+    db.prepare("DELETE FROM JobApplication WHERE id = ?").run(APPLIED.id);
+  });
+
+  await editDialog(page).getByRole("button", { name: "Save changes" }).click();
+
+  await expect(editDialog(page)).toBeVisible();
+  await expect(editDialog(page).getByText("Application not found")).toBeVisible();
+  // And the card is gone without a reload, which is the other half of it.
+  await expect(page.getByText(APPLIED.company)).toHaveCount(0);
+
+  // The dialog closes when the person closes it, and nothing was written.
+  await page.keyboard.press("Escape");
+  await expect(editDialog(page)).toBeHidden();
+  expect(storedRow(APPLIED.id)).toBeUndefined();
+});
+
 test("deletes an application once the deletion is confirmed", async ({ page }) => {
   const total = storedCount();
   await page.goto("/");

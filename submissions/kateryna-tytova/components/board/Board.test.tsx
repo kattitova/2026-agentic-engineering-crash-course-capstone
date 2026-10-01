@@ -303,3 +303,70 @@ describe("Board opening an application for editing", () => {
     expect(cardNames()).toHaveLength(3);
   });
 });
+
+describe("Board editing an application that no longer exists", () => {
+  it("keeps the form open with the message when the row disappears under it", async () => {
+    // The not-found branch of updateApplication revalidates the board, so the
+    // row leaves `applications` in the same breath as the result arrives. If the
+    // dialog's open state is derived from the row being present, that
+    // revalidation unmounts the form and takes the message with it - leaving a
+    // dialog that closes and a card that vanishes, which is indistinguishable
+    // from a save that worked.
+    updateApplicationFromForm.mockResolvedValue({ ok: false, error: "Application not found" });
+    const { rerender } = render(<Board applications={CARDS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Initech" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    });
+
+    // The revalidated list arrives without the row.
+    rerender(<Board applications={CARDS.slice(0, 2)} />);
+
+    expect(screen.getByRole("dialog", { name: "Edit application" })).toBeVisible();
+    expect(screen.getByText("Application not found")).toBeInTheDocument();
+    // And the card is gone, which is the other half of the requirement.
+    expect(screen.queryByText("Initech")).toBeNull();
+  });
+
+  it("closes only when the person dismisses it", async () => {
+    updateApplicationFromForm.mockResolvedValue({ ok: false, error: "Application not found" });
+    const { rerender } = render(<Board applications={CARDS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Initech" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    });
+    rerender(<Board applications={CARDS.slice(0, 2)} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(screen.queryByRole("dialog", { name: "Edit application" })).toBeNull();
+  });
+});
+
+describe("Board holding a deletion that is in flight", () => {
+  it("offers no way to confirm the same deletion twice", async () => {
+    // The requirement is that one confirmation cannot become two writes. It is
+    // met structurally rather than by a disabled control: the confirmation is
+    // closed before the write starts and the card is optimistically removed, so
+    // neither control exists while the deletion is outstanding.
+    const settlers = deferDeletion();
+    render(<Board applications={CARDS} />);
+
+    await confirmDeletionOf("Acme Cloud");
+
+    expect(screen.queryByRole("heading", { name: "Delete Acme Cloud?" })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Delete Acme Cloud" })).toBeNull(),
+    );
+    expect(deleteApplication).toHaveBeenCalledTimes(1);
+
+    // Every other card is still deletable while this one is in flight.
+    expect(screen.getByRole("button", { name: "Delete Globex" })).toBeEnabled();
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: { id: "a" } });
+    });
+  });
+});

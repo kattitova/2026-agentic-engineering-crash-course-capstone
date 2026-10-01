@@ -220,3 +220,24 @@ plan, and why. Empty is fine on Day 0.)_
   One `notFound()` helper now owns that branch for all three actions.
   Deliberately not on the catch-all branch: there the write provably did not
   happen, and refetching the board would say otherwise.
+
+- **2026-10-01 — a dialog closes when the person closes it, not when its row
+  leaves the list.** The board first derived each dialog's open state from the
+  application still being in the shown list. The not-found branch of
+  `updateApplication` revalidates the board, so the row left the list in the
+  same breath as the result arrived: the form was unmounted with its
+  "Application not found" message still in it, and the person saw a dialog close
+  and a card vanish — which is what a save that worked looks like. Found by the
+  2026-10-01 review pass (`R20261001-6`) and reproduced at board level before
+  being fixed. The board now holds the application itself. Nothing is lost by
+  that: the form is keyed by the application and seeds its fields once per
+  mount, so it never re-read the looked-up row anyway.
+
+- **2026-10-01 — the delete confirmation carries no pending state.** The board
+  closes it before starting the write, so a second confirmation is impossible
+  because the control no longer exists, not because it is disabled. The
+  `application-delete` requirement ("A deletion in flight cannot be started
+  again") is therefore met structurally, and the task's original wording — a
+  control disabled while writing — described a mechanism that would have been a
+  state the application cannot produce, with two tests asserting it. Raised by
+  the same review pass as `R20261001-7`.

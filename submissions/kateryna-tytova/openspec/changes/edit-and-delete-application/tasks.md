@@ -95,9 +95,13 @@ e2e run in 7.5, not by a unit test.
 
 - [x] 6.1 Add `ConfirmDeleteDialog` on the `showModal()` pattern, naming the application in a
       heading the dialog is labelled by, with a confirm and a decline control. Verify tests assert
-      that it is announced with the application's name, that declining deletes nothing and returns
-      focus to the control that opened it, and that the confirm control is disabled while the
-      deletion is in flight
+      that it is announced with the application's name and that declining deletes nothing. Focus
+      returning to the control that opened it is the native dialog's and is covered in 7.5.
+      **Amended:** no disabled-while-writing confirm control. The board closes the confirmation
+      before starting the write, so that state is unreachable and asserting it would be two tests
+      against something the app cannot produce. "A deletion in flight cannot be started again" is
+      met structurally instead, and `Board.test.tsx` asserts neither control exists while the
+      write is outstanding
 - [x] 6.2 Wire `Board` to hold `editingId` and `deletingId`, render one `ApplicationDialog` and one
       `ConfirmDeleteDialog`, and route deletion failures into the existing assertive alert region.
       Verify a test asserts a failed deletion shows the message on the board while the board itself
@@ -126,5 +130,5 @@ e2e run in 7.5, not by a unit test.
       `appliedDate` and `statusChangedAt` alone, and that deletion is final with no undo in the MVP.
       Verify the entry is dated and names this change
 - [x] 7.7 Run `npm run verify` and the full `npm run test:e2e`, and verify both pass with no errors
-- [ ] 7.8 Request a review pass from a separate agent session against this change, and verify the
+- [x] 7.8 Request a review pass from a separate agent session against this change, and verify the
       outcome is recorded under `docs/reviews/` and indexed in `docs/review-log.md`

@@ -10,7 +10,7 @@ interface BoardColumnProps {
   column: BoardColumnDefinition;
   applications: JobApplication[];
   /** Absent when the column is rendered outside a DndContext, as in its tests. */
-  isMovePending?: (cardId: string) => boolean;
+  isCardBusy?: (cardId: string) => boolean;
   focusCardId?: string | null;
   onFocusRestored?: () => void;
   onEdit?: (application: JobApplication) => void;
@@ -21,7 +21,7 @@ interface BoardColumnProps {
 export function BoardColumn({
   column,
   applications,
-  isMovePending = () => false,
+  isCardBusy = () => false,
   focusCardId = null,
   onFocusRestored,
   onEdit,
@@ -70,7 +70,7 @@ export function BoardColumn({
             <DraggableCard
               key={application.id}
               application={application}
-              isMovePending={isMovePending(application.id)}
+              isCardBusy={isCardBusy(application.id)}
               shouldRestoreFocus={application.id === focusCardId}
               onFocusRestored={onFocusRestored}
               onEdit={onEdit}

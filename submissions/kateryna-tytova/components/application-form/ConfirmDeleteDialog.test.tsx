@@ -120,36 +120,6 @@ describe("ConfirmDeleteDialog", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it("holds the confirm control while the deletion is being stored", () => {
-    // One confirmation must not become two writes.
-    render(
-      <ConfirmDeleteDialog
-        application={application()}
-        pending
-        onConfirm={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: /deleting/i })).toBeDisabled();
-  });
-
-  it("does not fire a second confirmation while the first is in flight", () => {
-    const onConfirm = vi.fn();
-    render(
-      <ConfirmDeleteDialog
-        application={application()}
-        pending
-        onConfirm={onConfirm}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /deleting/i }));
-
-    expect(onConfirm).not.toHaveBeenCalled();
-  });
-
   it("shows nothing while there is no application to delete", () => {
     render(
       <ConfirmDeleteDialog application={null} onConfirm={vi.fn()} onCancel={vi.fn()} />,

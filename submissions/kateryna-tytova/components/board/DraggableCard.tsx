@@ -7,7 +7,7 @@ import { ApplicationCard } from "./ApplicationCard";
 
 interface DraggableCardProps {
   application: JobApplication;
-  isMovePending: boolean;
+  isCardBusy: boolean;
   /** True for the card a keyboard move just landed on. */
   shouldRestoreFocus?: boolean;
   onFocusRestored?: () => void;
@@ -24,7 +24,7 @@ interface DraggableCardProps {
  */
 export function DraggableCard({
   application,
-  isMovePending,
+  isCardBusy,
   shouldRestoreFocus = false,
   onFocusRestored,
   onEdit,
@@ -34,7 +34,7 @@ export function DraggableCard({
   const { setNodeRef, attributes, listeners, transform, isDragging } = useDraggable({
     id: application.id,
     // A card whose write has not settled must not start another move.
-    disabled: isMovePending,
+    disabled: isCardBusy,
     data: { status: application.status },
   });
 
@@ -42,11 +42,11 @@ export function DraggableCard({
   // different column, so the keyboard user is left on the document body with no
   // way back except tabbing from the top of the page.
   useEffect(() => {
-    if (shouldRestoreFocus && !isMovePending) {
+    if (shouldRestoreFocus && !isCardBusy) {
       handleRef.current?.focus();
       onFocusRestored?.();
     }
-  }, [shouldRestoreFocus, isMovePending, onFocusRestored]);
+  }, [shouldRestoreFocus, isCardBusy, onFocusRestored]);
 
   return (
     <div
@@ -60,7 +60,7 @@ export function DraggableCard({
     >
       <ApplicationCard
         application={application}
-        isMovePending={isMovePending}
+        isCardBusy={isCardBusy}
         onEdit={onEdit}
         onDelete={onDelete}
         dragHandle={{ attributes, listeners, ref: handleRef }}

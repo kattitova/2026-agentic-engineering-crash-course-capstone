@@ -3,8 +3,11 @@ import type { Ref } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { isHttpUrl } from "@/lib/applications/validation";
 
+// An outline, not a background tint alone: these controls are icon-only, and a
+// tint is the one focus indicator that disappears against a card that is itself
+// light - and that carries no contrast at all in forced-colors mode.
 const CONTROL_CLASS =
-  "rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:bg-slate-100";
+  "rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-600";
 
 /** The outline icons the three controls share. */
 const ICON = {
@@ -27,8 +30,13 @@ export interface DragHandleBinding {
 
 interface ApplicationCardProps {
   application: JobApplication;
-  /** True only for the card whose own status write has not settled yet. */
-  isMovePending?: boolean;
+  /**
+   * True while this card has a write in flight, of either kind. It disables the
+   * drag handle: a card whose status or deletion has not settled must not start
+   * another move. The edit and delete controls stay usable - the person can
+   * still correct a typo while a status write is outstanding.
+   */
+  isCardBusy?: boolean;
   /**
    * Opens this application for editing. Absent when the card is rendered
    * outside the board, which is how it stays testable on its own.
@@ -45,7 +53,7 @@ interface ApplicationCardProps {
 
 export function ApplicationCard({
   application,
-  isMovePending = false,
+  isCardBusy = false,
   onEdit,
   onDelete,
   dragHandle,
@@ -118,7 +126,7 @@ export function ApplicationCard({
           <button
             ref={dragHandle?.ref}
             type="button"
-            disabled={isMovePending}
+            disabled={isCardBusy}
             aria-label={`Move ${application.company}`}
             className={`${CONTROL_CLASS} cursor-grab disabled:cursor-wait disabled:opacity-40`}
             {...dragHandle?.attributes}

@@ -6,8 +6,6 @@ import type { JobApplication } from "@/app/generated/prisma/client";
 export interface ConfirmDeleteDialogProps {
   /** The application to delete. `null` closes the dialog. */
   application: JobApplication | null;
-  /** True while this application's deletion is being stored. */
-  pending?: boolean;
   onConfirm: (application: JobApplication) => void;
   /** Declining, dismissing with Escape, or clicking the backdrop. */
   onCancel: () => void;
@@ -18,14 +16,16 @@ export interface ConfirmDeleteDialogProps {
  *
  * A native `<dialog>` rather than `window.confirm`: the focus trap, Escape, the
  * inert background and focus restoration come from the browser, it can name the
- * application in a heading the dialog is labelled by, it cannot be suppressed
- * the way a browser's own confirm can, and it does not block the event loop -
- * which is what lets the confirm control show a pending state while the
- * deletion is stored.
+ * application in a heading the dialog is labelled by, and it cannot be
+ * suppressed the way a browser's own confirm can.
+ *
+ * It carries no pending state. The board closes it before the write starts, so
+ * a second confirmation is impossible because the control no longer exists - a
+ * disabled-while-writing prop would be a state the app cannot produce, and two
+ * tests asserting one.
  */
 export function ConfirmDeleteDialog({
   application,
-  pending = false,
   onConfirm,
   onCancel,
 }: ConfirmDeleteDialogProps) {
@@ -71,19 +71,16 @@ export function ConfirmDeleteDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex h-10 items-center rounded-xl px-4 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              className="inline-flex h-10 items-center rounded-xl px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500"
             >
               Keep it
             </button>
-            {/* Held while the write is outstanding, so one confirmation cannot
-                become two deletions. */}
             <button
               type="button"
-              disabled={pending}
               onClick={() => onConfirm(application)}
-              className="inline-flex h-10 items-center rounded-xl bg-rose-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 items-center rounded-xl bg-rose-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
             >
-              {pending ? "Deleting…" : "Delete application"}
+              Delete application
             </button>
           </div>
         </div>
