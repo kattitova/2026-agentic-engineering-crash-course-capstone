@@ -19,3 +19,4 @@ distinct from the code reviewer's `R` ids because the shared disposition ledger
 ## Passes
 
 - [2026-10-01 — show-days-in-status](proposal-reviews/2026-10-01-show-days-in-status.md) — REVISE PROPOSAL (0 critical, 1 major, 5 minor)
+- [2026-10-02 — flag-stale-applications](proposal-reviews/2026-10-02-flag-stale-applications.md) — REVISE PROPOSAL (0 critical, 1 major, 4 minor)
