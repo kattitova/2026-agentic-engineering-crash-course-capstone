@@ -61,17 +61,17 @@ it pass. Nothing else here is new logic — the optimistic move already sets bot
 
 ## 4. End to end
 
-- [ ] 4.1 Add an e2e case asserting the seeded `e2e-applied` card (Applied, far past the threshold)
+- [x] 4.1 Add an e2e case asserting the seeded `e2e-applied` card (Applied, far past the threshold)
       shows the visible "No movement" text and that `e2e-wishlist` (Wishlist, also old) does not —
       the positive and the negative the rule most easily gets wrong, both already in the seed
-- [ ] 4.2 Add e2e cases for the boundary with rows the spec inserts at a controlled age: Applied at
+- [x] 4.2 Add e2e cases for the boundary with rows the spec inserts at a controlled age: Applied at
       14 days and 12 hours is flagged, Applied at 13 days and 12 hours is not. Use the half-day
       offset `days-in-status.spec.ts` already uses, so the flooring boundary is twelve hours from
       either clock and the result does not depend on when the suite runs
-- [ ] 4.3 Add an e2e case that moves the stale card out of Applied with the keyboard and verifies the
+- [x] 4.3 Add an e2e case that moves the stale card out of Applied with the keyboard and verifies the
       flag is gone without a reload, and still gone after one. Use the shared helper in
       `e2e/keyboard-move.ts`, not bare key presses — its waits exist because of a measured flake
-- [ ] 4.4 Add an e2e case that picks the stale `e2e-applied` card up and drops it on Applied without
+- [x] 4.4 Add an e2e case that picks the stale `e2e-applied` card up and drops it on Applied without
       choosing a column, and verifies it is still flagged and its stored `statusChangedAt` is
       unchanged. Use `pickUpAndDropInPlace` from `e2e/keyboard-move.ts`; `days-in-status.spec.ts`
       already does exactly this for the day count. This is the delta scenario "Dropped in its own
@@ -79,23 +79,23 @@ it pass. Nothing else here is new logic — the optimistic move already sets bot
       four a test — and the hole it leaves is real: a later change making `planCardMove` return a
       move instead of `null` would reset the clock and silently unflag every stale card somebody
       picked up and put down
-- [ ] 4.5 Extend `e2e/long-value-layout.spec.ts` with a stale card carrying an **ordinary** company
+- [x] 4.5 Extend `e2e/long-value-layout.spec.ts` with a stale card carrying an **ordinary** company
       name, and verify no column changes width and the page does not scroll sideways. This is the
       flag measured alone, which is the delta scenario "A flagged card does not move the columns"
-- [ ] 4.6 Add a second row there: a stale card carrying a 200-character company name, measured
+- [x] 4.6 Add a second row there: a stale card carrying a 200-character company name, measured
       separately. Two rows rather than one card carrying both, because a combined card could not say
       which of the two moved a column — the reason that file already records about its own control
       test, and which the first draft of this plan cited while doing the opposite
-- [ ] 4.7 Run `npm run test:e2e` and verify it passes. This needs
+- [x] 4.7 Run `npm run test:e2e` and verify it passes. This needs
       `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`, because `npm run e2e:db` issues
       `prisma db push --force-reset`; ask the user before running it
 
 ## 5. Record-keeping and the gates
 
-- [ ] 5.1 Add the `spec.md` change-log entry recording that the threshold is inclusive at 14 whole
+- [x] 5.1 Add the `spec.md` change-log entry recording that the threshold is inclusive at 14 whole
       days and why, and that the flag is carried by text because colour alone fails WCAG 1.4.1.
       Verify the entry is dated and names this change
-- [ ] 5.2 Run `npm run verify` and verify it passes with no errors
+- [x] 5.2 Run `npm run verify` and verify it passes with no errors
 - [ ] 5.3 Run the `openspec-verify-change` skill (`/opsx:verify flag-stale-applications`) and fix
       anything it reports, so both mechanical gates have run before any review session is spent
 - [ ] 5.4 **Offer** the user an independent `reviewer` pass and **wait for their answer**. This task

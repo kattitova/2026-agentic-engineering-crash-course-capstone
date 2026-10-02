@@ -286,3 +286,37 @@ plan, and why. Empty is fine on Day 0.)_
   ratio against the background it will actually sit on — and leave margin,
   because Tailwind 4 defines these as oklch and the sRGB hexes those numbers come
   from are close but not identical.
+
+- **2026-10-02 — the stale threshold is inclusive at 14 whole days (MVP item
+  6).** This file words item 6 twice — "more than 14 days in APPLIED" and
+  "`statusChangedAt` older than 14 days" — and those readings differ by a day.
+  The rule implemented is `status === APPLIED && daysInStatus(...) >= 14`, and
+  the deciding argument is the display rather than the English: the card already
+  shows "14d", so not flagging it while a card reading "15d" is flagged would
+  look arbitrary with nothing on the card to explain the difference. It also
+  matches what the floored count means, since `daysInStatus` returning 14 covers
+  everything from exactly 14 days to just under 15 — "older than 14 days" for
+  all but the single instant at exactly 14. Recorded because the next person to
+  read "more than 14 days" reaches the same fork.
+
+  Both halves of the rule are required, and the status half is the one most
+  easily lost: an application sitting in Wishlist for months is a bookmark, not a
+  stalled application, and one in Rejected is finished. The seeded e2e board
+  carries a 263-day Wishlist card precisely so that case is exercised rather than
+  assumed.
+
+- **2026-10-02 — the stale flag is carried by text, not by colour.** Colour as
+  the only carrier of meaning fails WCAG 1.4.1: a reader who cannot distinguish
+  amber from slate would have no way to tell a flagged card from an unflagged
+  one. So the flag is a pill reading "No movement", and the tint reinforces the
+  word rather than replacing it. A ring around the card was considered and left
+  out for the same reason — it is pure colour, so it would add nothing a
+  colour-blind reader could use.
+
+  The colour pair was computed against the tint it sits on, as the earlier entry
+  in this log asks: `amber-800` on `amber-100` is 6.37:1. `amber-700` was the
+  first choice at 4.51:1 — over the 4.5:1 minimum for 12px text by 0.01, which is
+  no margin at all for Tailwind 4's oklch values not being the sRGB hexes the
+  ratio is computed from. `amber-600`, the obvious warning colour, is 2.86:1 and
+  fails outright. The lesson is that "it is a warning, so use the warning colour"
+  does not survive contact with a tinted background.

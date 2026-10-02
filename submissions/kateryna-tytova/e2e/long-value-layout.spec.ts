@@ -141,6 +141,88 @@ test("a four-digit day count does not change any column's width", async ({ page 
   expect(await scrollsHorizontally(page)).toBe(false);
 });
 
+/**
+ * A stale card, so the row holds two pills instead of one.
+ *
+ * An ordinary company name on purpose: this is the flag measured alone. The
+ * combined case — stale *and* a 200-character name — is the row after it, and
+ * they are separate for the reason this file's control test already records:
+ * one measurement with two possible causes cannot say which of them moved a
+ * column.
+ */
+function insertStaleApplication(id: string, company: string): void {
+  withDatabase((db) => {
+    const now = Date.now();
+    const stale = now - 30 * 24 * 60 * 60 * 1000;
+    db.prepare(
+      `INSERT INTO JobApplication
+         (id, company, position, status, link, notes, appliedDate, statusChangedAt, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
+    ).run(
+      id,
+      company,
+      "Analyst",
+      "APPLIED",
+      storedInstant(stale),
+      storedInstant(stale),
+      storedInstant(now),
+    );
+  });
+}
+
+test("a flagged card does not change any column's width", async ({ page }) => {
+  await page.goto("/");
+  const before = await columnWidths(page);
+  expect(await scrollsHorizontally(page)).toBe(false);
+
+  insertStaleApplication("e2e-stale-layout", "Bluth Company");
+  await page.reload();
+
+  // The flag is really on the board, so the measurement is of a board that
+  // holds it rather than of one that dropped the row.
+  const applied = page.getByRole("region", { name: "Applied" });
+  await expect(
+    applied.getByRole("article", { name: "Bluth Company" }).getByText("No movement", { exact: true }),
+  ).toBeVisible();
+
+  const after = await columnWidths(page);
+  for (const [index, width] of after.entries()) {
+    expect(
+      Math.abs(width - (before[index] ?? 0)),
+      `column ${COLUMNS[index]} changed width`,
+    ).toBeLessThanOrEqual(TOLERANCE);
+  }
+
+  expect(await scrollsHorizontally(page)).toBe(false);
+});
+
+test("a flagged card with a long unbroken name does not change any column's width", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const before = await columnWidths(page);
+  expect(await scrollsHorizontally(page)).toBe(false);
+
+  insertStaleApplication("e2e-stale-long", LONG);
+  await page.reload();
+
+  const applied = page.getByRole("region", { name: "Applied" });
+  await expect(applied.getByRole("heading", { name: LONG })).toBeVisible();
+  await expect(
+    applied.getByRole("article", { name: LONG }).getByText("No movement", { exact: true }),
+  ).toBeVisible();
+
+  const after = await columnWidths(page);
+  for (const [index, width] of after.entries()) {
+    expect(
+      Math.abs(width - (before[index] ?? 0)),
+      `column ${COLUMNS[index]} changed width`,
+    ).toBeLessThanOrEqual(TOLERANCE);
+  }
+
+  expect(await scrollsHorizontally(page)).toBe(false);
+});
+
 test("a long unbroken value does not change any column's width", async ({ page }) => {
   await page.goto("/");
   const before = await columnWidths(page);
