@@ -26,19 +26,19 @@ make, and the component and its test land together.
 
 ## 2. A moved card reads as newly arrived
 
-- [ ] 2.1 Write a failing test (red) in `useBoardCards.test.ts` asserting that the optimistic `move`
+- [x] 2.1 Write a failing test (red) in `useBoardCards.test.ts` asserting that the optimistic `move`
       change sets `statusChangedAt` to the served instant as well as `status`, so the moved card's
       count is zero before the write settles. Verify it fails first
-- [ ] 2.2 Add the served instant to the hook and set `statusChangedAt` in `applyChange`'s `move`
+- [x] 2.2 Add the served instant to the hook and set `statusChangedAt` in `applyChange`'s `move`
       branch, and verify 2.1 passes with every existing move and deletion test untouched
-- [ ] 2.3 Verify with a test that a failed move restores the original `statusChangedAt` — the
+- [x] 2.3 Verify with a test that a failed move restores the original `statusChangedAt` — the
       optimistic change is dropped and the server list wins — so the badge goes back with the card
-- [ ] 2.4 Verify with a test that the `remove` branch leaves `statusChangedAt` alone, so the merged
+- [x] 2.4 Verify with a test that the `remove` branch leaves `statusChangedAt` alone, so the merged
       reducer did not acquire a second side effect
 
 ## 3. The instant reaches the card
 
-- [ ] 3.1 Have `app/page.tsx` take the instant once per request and pass it to `Board`, threaded
+- [x] 3.1 Have `app/page.tsx` take the instant once per request and pass it to `Board`, threaded
       through `BoardColumn` and `DraggableCard` to `ApplicationCard` as a **required** prop with no
       default at any level. Verify `npx tsc --noEmit` passes and that the four existing test files
       (`Board.test.tsx`, `BoardColumn.test.tsx`, `ApplicationCard.test.tsx`, `useBoardCards.test.ts`)
@@ -46,28 +46,28 @@ make, and the component and its test land together.
       keep every one of those green, and put a clock back inside a component that renders twice —
       which is the single failure this design exists to prevent, so the absence of a default is the
       thing to check, not just that it compiles
-- [ ] 3.2 Verify with a test that `BoardColumn` passes the same instant to every card it renders, so
+- [x] 3.2 Verify with a test that `BoardColumn` passes the same instant to every card it renders, so
       two applications whose statuses changed at the same moment show the same number
-- [ ] 3.3 Verify with a `Board` test that two cards whose `statusChangedAt` are equal show the same
+- [x] 3.3 Verify with a `Board` test that two cards whose `statusChangedAt` are equal show the same
       count, and that a card whose `statusChangedAt` is 12 days before the instant shows 12 — the
       scenario "every card is counted against the same moment", asserted at the board rather than
       assumed from the prop
 
 ## 4. The badge
 
-- [ ] 4.1 Add the badge to `ApplicationCard` on its own row below the position, `shrink-0` with
+- [x] 4.1 Add the badge to `ApplicationCard` on its own row below the position, `shrink-0` with
       `tabular-nums`, showing `short` in a `aria-hidden` span and `full` in an `.sr-only` span —
       the pattern `BoardColumn`'s count already uses, because an `aria-label` on a bare span sits on
       a name-prohibited role. Verify `ApplicationCard.test.tsx` asserts the announced text is the
       full form naming the status ("12 days in Interview") and not the abbreviation
-- [ ] 4.2 Verify with tests that the card shows "Today" for under a day, a singular day for exactly
+- [x] 4.2 Verify with tests that the card shows "Today" for under a day, a singular day for exactly
       one, and the plain count for 12
-- [ ] 4.3 Verify with a test that a card whose stored `statusChangedAt` is after the instant renders
+- [x] 4.3 Verify with a test that a card whose stored `statusChangedAt` is after the instant renders
       and reads as today rather than showing a negative number
-- [ ] 4.4 Verify with a `Board` test that a card moved to another column is announced with the name
+- [x] 4.4 Verify with a `Board` test that a card moved to another column is announced with the name
       of the column it is now in, not the one it came from — the announced status is derived from
       where the card is, so a stale label would be the badge contradicting its own column
-- [ ] 4.5 Verify with a test that a card whose count is four digits still renders the badge, and
+- [x] 4.5 Verify with a test that a card whose count is four digits still renders the badge, and
       with `BoardColumn.test.tsx` that every card in a column has exactly one badge
 - [ ] 4.6 Extend `e2e/long-value-layout.spec.ts` with a second inserted row — an ordinary company
       name and `statusChangedAt` several thousand days back — and verify the column widths are

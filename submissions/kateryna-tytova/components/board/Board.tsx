@@ -75,8 +75,20 @@ const columnCoordinateGetter: KeyboardCoordinateGetter = (
   return keyboardStep(columns, currentStatus, direction) ?? undefined;
 };
 
-export function Board({ applications }: { applications: JobApplication[] }) {
-  const { shown, isCardBusy, error, moveCard, removeCard } = useBoardCards(applications);
+/**
+ * `now` is the instant the page was served, and it is required at every level
+ * down to the card. Defaulting it would type-check, keep every existing test
+ * green, and put a clock back inside a component that renders twice - which is
+ * the single failure the day-count design exists to prevent.
+ */
+export function Board({
+  applications,
+  now,
+}: {
+  applications: JobApplication[];
+  now: Date;
+}) {
+  const { shown, isCardBusy, error, moveCard, removeCard } = useBoardCards(applications, now);
   // Only set for a keyboard move: after a pointer drag the person's attention is
   // already where they dropped the card, and focusing would show a ring they
   // did not ask for.
@@ -179,6 +191,7 @@ export function Board({ applications }: { applications: JobApplication[] }) {
             onFocusRestored={clearFocusTarget}
             onEdit={openEdit}
             onDelete={openDelete}
+            now={now}
             draggable
           />
         ))}

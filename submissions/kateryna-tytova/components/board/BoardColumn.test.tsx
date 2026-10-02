@@ -7,6 +7,13 @@ import { BOARD_COLUMNS } from "@/lib/applications/board";
 import { BoardColumn } from "./BoardColumn";
 
 const TIMESTAMP = new Date("2026-09-01T00:00:00.000Z");
+/**
+ * The instant the board was served. Passed explicitly in every render: the prop
+ * is required precisely so a forgotten call site is a compile error rather than
+ * a component quietly reaching for a clock.
+ */
+const NOW = TIMESTAMP;
+
 
 const [, APPLIED_COLUMN] = BOARD_COLUMNS;
 
@@ -36,7 +43,7 @@ describe("BoardColumn", () => {
     // <span> sits on ARIA's name-prohibited `generic` role, so it passed a
     // getByLabelText check while remaining unreliable for a screen reader.
     render(
-      <BoardColumn
+      <BoardColumn now={NOW}
         column={APPLIED_COLUMN}
         applications={[application("a"), application("b"), application("c")]}
       />,
@@ -48,13 +55,13 @@ describe("BoardColumn", () => {
   });
 
   it("names the column as a region so it can be reached as a landmark", () => {
-    render(<BoardColumn column={APPLIED_COLUMN} applications={[]} />);
+    render(<BoardColumn now={NOW} column={APPLIED_COLUMN} applications={[]} />);
 
     expect(screen.getByRole("region", { name: "Applied" })).toBeInTheDocument();
   });
 
   it("uses the singular for one application", () => {
-    render(<BoardColumn column={APPLIED_COLUMN} applications={[application("a")]} />);
+    render(<BoardColumn now={NOW} column={APPLIED_COLUMN} applications={[application("a")]} />);
 
     expect(screen.getByText("1 application")).toBeInTheDocument();
   });
@@ -64,7 +71,7 @@ describe("BoardColumn", () => {
 
   it("shows the number of applications it holds", () => {
     render(
-      <BoardColumn
+      <BoardColumn now={NOW}
         column={APPLIED_COLUMN}
         applications={[application("a"), application("b"), application("c")]}
       />,
@@ -74,13 +81,13 @@ describe("BoardColumn", () => {
   });
 
   it("shows the count 0 when it holds nothing", () => {
-    render(<BoardColumn column={APPLIED_COLUMN} applications={[]} />);
+    render(<BoardColumn now={NOW} column={APPLIED_COLUMN} applications={[]} />);
 
     expect(screen.getByText("0")).toBeInTheDocument();
   });
 
   it("explains that an empty column is empty instead of leaving it blank", () => {
-    const { container } = render(<BoardColumn column={APPLIED_COLUMN} applications={[]} />);
+    const { container } = render(<BoardColumn now={NOW} column={APPLIED_COLUMN} applications={[]} />);
 
     expect(screen.getByText(/no applications yet/i)).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(0);
@@ -88,7 +95,7 @@ describe("BoardColumn", () => {
 
   it("renders one card per application", () => {
     const { container } = render(
-      <BoardColumn column={APPLIED_COLUMN} applications={[application("a"), application("b")]} />,
+      <BoardColumn now={NOW} column={APPLIED_COLUMN} applications={[application("a"), application("b")]} />,
     );
 
     expect(container.querySelectorAll("article")).toHaveLength(2);
@@ -104,7 +111,7 @@ describe("BoardColumn passing the per-card controls down", () => {
 
   it("gives every card its own edit and delete controls", () => {
     render(
-      <BoardColumn
+      <BoardColumn now={NOW}
         column={APPLIED_COLUMN}
         applications={CARDS}
         onEdit={vi.fn()}
@@ -123,7 +130,7 @@ describe("BoardColumn passing the per-card controls down", () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     render(
-      <BoardColumn
+      <BoardColumn now={NOW}
         column={APPLIED_COLUMN}
         applications={CARDS}
         onEdit={onEdit}
@@ -139,9 +146,67 @@ describe("BoardColumn passing the per-card controls down", () => {
   });
 
   it("renders no such controls when the column is given none", () => {
-    render(<BoardColumn column={APPLIED_COLUMN} applications={CARDS} />);
+    render(<BoardColumn now={NOW} column={APPLIED_COLUMN} applications={CARDS} />);
 
     expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
+  });
+});
+
+describe("BoardColumn passing the served instant down", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("counts every card it renders against the same instant", () => {
+    // Two cards whose statuses changed at the same moment must agree. If the
+    // column handed each card a different instant - or let a card find its own -
+    // these two numbers could differ.
+    const cards = [
+      application("a", { company: "Acme Cloud" }),
+      application("b", { company: "Globex" }),
+    ];
+
+    render(
+      <BoardColumn
+        column={APPLIED_COLUMN}
+        applications={cards}
+        now={new Date(TIMESTAMP.getTime() + 12 * DAY)}
+      />,
+    );
+
+    expect(screen.getAllByText("12 days in Applied")).toHaveLength(2);
+  });
+
+  it("gives each card exactly one badge", () => {
+    const cards = [application("a"), application("b"), application("c")];
+
+    render(
+      <BoardColumn
+        column={APPLIED_COLUMN}
+        applications={cards}
+        now={new Date(TIMESTAMP.getTime() + 3 * DAY)}
+      />,
+    );
+
+    expect(screen.getAllByText(/days in Applied/)).toHaveLength(3);
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+  });
+
+  it("counts cards with different moments differently", () => {
+    // The other half: one instant, not one answer.
+    const cards = [
+      application("a", { statusChangedAt: TIMESTAMP }),
+      application("b", { statusChangedAt: new Date(TIMESTAMP.getTime() + 10 * DAY) }),
+    ];
+
+    render(
+      <BoardColumn
+        column={APPLIED_COLUMN}
+        applications={cards}
+        now={new Date(TIMESTAMP.getTime() + 12 * DAY)}
+      />,
+    );
+
+    expect(screen.getByText("12 days in Applied")).toBeInTheDocument();
+    expect(screen.getByText("2 days in Applied")).toBeInTheDocument();
   });
 });

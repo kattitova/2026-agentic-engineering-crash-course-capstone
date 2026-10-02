@@ -15,6 +15,8 @@ interface BoardColumnProps {
   onFocusRestored?: () => void;
   onEdit?: (application: JobApplication) => void;
   onDelete?: (application: JobApplication) => void;
+  /** The instant the board was served. Required, so no card can default to a clock. */
+  now: Date;
   draggable?: boolean;
 }
 
@@ -26,6 +28,7 @@ export function BoardColumn({
   onFocusRestored,
   onEdit,
   onDelete,
+  now,
   draggable = false,
 }: BoardColumnProps) {
   const headingId = `column-${column.status}-heading`;
@@ -75,6 +78,7 @@ export function BoardColumn({
               onFocusRestored={onFocusRestored}
               onEdit={onEdit}
               onDelete={onDelete}
+              now={now}
             />
           ) : (
             <ApplicationCard
@@ -82,6 +86,7 @@ export function BoardColumn({
               application={application}
               onEdit={onEdit}
               onDelete={onDelete}
+              now={now}
             />
           ),
         )

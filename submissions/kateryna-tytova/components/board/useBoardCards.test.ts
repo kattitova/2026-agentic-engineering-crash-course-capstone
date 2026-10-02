@@ -16,6 +16,12 @@ vi.mock("@/app/actions/applications", () => ({ updateApplicationStatus, deleteAp
 
 const TIMESTAMP = new Date("2026-09-01T00:00:00.000Z");
 
+/**
+ * The instant the board was served. Every badge is measured against it, and
+ * an optimistic move stamps it onto the card it moves.
+ */
+const SERVED_AT = new Date("2026-09-20T00:00:00.000Z");
+
 function application(id: string, status: ApplicationStatus): JobApplication {
   return {
     id,
@@ -80,7 +86,7 @@ afterEach(() => {
 describe("useBoardCards", () => {
   it("shows the move before the server has confirmed it", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -99,7 +105,7 @@ describe("useBoardCards", () => {
 
   it("holds the moved card while its write is outstanding and releases it after", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -117,7 +123,7 @@ describe("useBoardCards", () => {
     // second drag re-enable the first card's handle while its write is still
     // outstanding, which is exactly the ordering the spec forbids.
     const settlers = deferAction();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -145,7 +151,7 @@ describe("useBoardCards", () => {
 
   it("drops the optimistic move and reports the failure when the write fails", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -165,7 +171,7 @@ describe("useBoardCards", () => {
 
   it("clears an earlier failure when a new move starts", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -187,7 +193,7 @@ describe("useBoardCards", () => {
 
   it("calls the server action once per move, with the card and its new status", async () => {
     const settlers = deferAction();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -210,7 +216,7 @@ describe("useBoardCards when the write does not settle into a result", () => {
     // the half that survives even a recovery: pending is released on the line
     // after the await, which a rejection never reaches.
     updateApplicationStatus.mockRejectedValue(new Error("database is locked"));
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
@@ -240,7 +246,7 @@ describe("useBoardCards when the write does not settle into a result", () => {
 describe("useBoardCards: deleting a card", () => {
   it("takes the card off the board before the server has confirmed it", async () => {
     const settlers = deferDeletion();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -255,7 +261,7 @@ describe("useBoardCards: deleting a card", () => {
 
   it("holds the card while its deletion is outstanding and releases it after", async () => {
     const settlers = deferDeletion();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -273,7 +279,7 @@ describe("useBoardCards: deleting a card", () => {
 
   it("puts the card back and reports the failure when the deletion fails", async () => {
     const settlers = deferDeletion();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -296,7 +302,7 @@ describe("useBoardCards: deleting a card", () => {
     // puts it back, so the hook must not do it - and the action revalidates on
     // that branch, which is what makes the list arrive without a reload.
     const settlers = deferDeletion();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -311,7 +317,7 @@ describe("useBoardCards: deleting a card", () => {
 
   it("releases the card and reports the failure when the deletion rejects", async () => {
     deleteApplication.mockRejectedValue(new Error("database is locked"));
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -324,7 +330,7 @@ describe("useBoardCards: deleting a card", () => {
 
   it("clears an earlier failure when a new deletion starts", async () => {
     const settlers = deferDeletion();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -346,7 +352,7 @@ describe("useBoardCards: deleting a card", () => {
 
   it("calls the server action once per deletion, with the card id", async () => {
     const settlers = deferDeletion();
-    const { result } = renderHook(() => useBoardCards(APPLICATIONS));
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
 
     act(() => {
       result.current.removeCard("a");
@@ -369,7 +375,7 @@ describe("useBoardCards: a move and a deletion of the same card", () => {
     const moves = deferAction();
     const deletions = deferDeletion();
     const { result, rerender } = renderHook(
-      ({ cards }: { cards: JobApplication[] }) => useBoardCards(cards),
+      ({ cards }: { cards: JobApplication[] }) => useBoardCards(cards, SERVED_AT),
       { initialProps: { cards: APPLICATIONS } },
     );
 
@@ -400,5 +406,94 @@ describe("useBoardCards: a move and a deletion of the same card", () => {
     expect(idsOf(result.current.shown)).toEqual(["b"]);
     expect(result.current.isCardBusy("a")).toBe(false);
     expect(result.current.error).toBeNull();
+  });
+});
+
+describe("useBoardCards: the badge follows a move", () => {
+  it("resets statusChangedAt with the optimistic move", async () => {
+    // The move's write provably resets statusChangedAt - planStatusChange does
+    // it on any real status change - so a card showing its old count in a new
+    // column would be stating the one thing the board knows to be wrong.
+    //
+    // The served instant, not a fresh Date: a rendered number must not come
+    // from the client clock, and the difference between the two is at most the
+    // age of the page.
+    const settlers = deferAction();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+
+    await waitFor(() => {
+      const moved = result.current.shown.find((item) => item.id === "a");
+      expect(moved?.status).toBe(ApplicationStatus.OFFER);
+      expect(moved?.statusChangedAt).toEqual(SERVED_AT);
+    });
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: application("a", ApplicationStatus.OFFER) });
+    });
+  });
+
+  it("leaves every other card's statusChangedAt alone", async () => {
+    const settlers = deferAction();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+    await waitFor(() => expect(result.current.shown[0]?.statusChangedAt).toEqual(SERVED_AT));
+
+    expect(result.current.shown.find((item) => item.id === "b")?.statusChangedAt).toEqual(
+      TIMESTAMP,
+    );
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: application("a", ApplicationStatus.OFFER) });
+    });
+  });
+
+  it("restores the original statusChangedAt when the move fails", async () => {
+    // The optimistic change is dropped and the server list wins, which is the
+    // same mechanism that already puts the card back in its column - so the
+    // badge goes back with it and needs no handling of its own.
+    const settlers = deferAction();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.OFFER));
+    });
+    await waitFor(() => expect(result.current.shown[0]?.statusChangedAt).toEqual(SERVED_AT));
+
+    await act(async () => {
+      settlers[0]?.({ ok: false, error: FAILED.move });
+    });
+
+    const restored = result.current.shown.find((item) => item.id === "a");
+    expect(restored?.status).toBe(ApplicationStatus.APPLIED);
+    expect(restored?.statusChangedAt).toEqual(TIMESTAMP);
+  });
+
+  it("does not touch statusChangedAt when a card is deleted", async () => {
+    // The merged reducer must not have picked up a second side effect: the
+    // remove branch filters, it does not rewrite.
+    const settlers = deferDeletion();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    act(() => {
+      result.current.removeCard("a");
+    });
+    await waitFor(() => expect(idsOf(result.current.shown)).toEqual(["b"]));
+
+    expect(result.current.shown[0]?.statusChangedAt).toEqual(TIMESTAMP);
+
+    await act(async () => {
+      settlers[0]?.({ ok: false, error: FAILED.remove });
+    });
+    // And unchanged on the card that comes back, too.
+    expect(result.current.shown.find((item) => item.id === "a")?.statusChangedAt).toEqual(
+      TIMESTAMP,
+    );
   });
 });

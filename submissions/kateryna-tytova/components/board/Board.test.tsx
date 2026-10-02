@@ -24,6 +24,13 @@ vi.mock("@/app/actions/applications", () => ({
 const { Board } = await import("./Board");
 
 const TIMESTAMP = new Date("2026-09-01T00:00:00.000Z");
+/**
+ * The instant the board was served. Passed explicitly in every render: the prop
+ * is required precisely so a forgotten call site is a compile error rather than
+ * a component quietly reaching for a clock.
+ */
+const NOW = TIMESTAMP;
+
 
 function application(
   id: string,
@@ -109,7 +116,7 @@ async function confirmDeletionOf(company: string) {
 
 describe("Board asking before it deletes", () => {
   it("deletes nothing when the delete control is activated", () => {
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Acme Cloud" }));
 
@@ -119,7 +126,7 @@ describe("Board asking before it deletes", () => {
   });
 
   it("deletes nothing when the confirmation is declined", () => {
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Acme Cloud" }));
     fireEvent.click(screen.getByRole("button", { name: /keep it/i }));
@@ -130,7 +137,7 @@ describe("Board asking before it deletes", () => {
   });
 
   it("names the application the control belongs to, not the first card", () => {
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Globex" }));
 
@@ -145,7 +152,7 @@ describe("Board after a confirmed deletion", () => {
     // Once the transition settles the board renders from the server list again
     // - which is the next test.
     const settlers = deferDeletion();
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     expect(countOf("Applied")).toBe("2 applications");
 
@@ -167,10 +174,10 @@ describe("Board after a confirmed deletion", () => {
     // The server list is the truth, and revalidatePath on the action is what
     // delivers it. Re-rendering with the shorter list is that arriving.
     deleteApplication.mockResolvedValue({ ok: true, data: { id: "a" } });
-    const { rerender } = render(<Board applications={CARDS} />);
+    const { rerender } = render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
-    rerender(<Board applications={CARDS.slice(1)} />);
+    rerender(<Board now={NOW} applications={CARDS.slice(1)} />);
 
     expect(screen.queryByText("Acme Cloud")).toBeNull();
     expect(screen.getByText("Globex")).toBeInTheDocument();
@@ -182,7 +189,7 @@ describe("Board after a confirmed deletion", () => {
 
   it("closes the confirmation rather than leaving it naming a card that is gone", async () => {
     deleteApplication.mockResolvedValue({ ok: true, data: { id: "a" } });
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
 
@@ -193,7 +200,7 @@ describe("Board after a confirmed deletion", () => {
 describe("Board when a deletion fails", () => {
   it("shows the failure on the board and keeps the board itself", async () => {
     deleteApplication.mockResolvedValue({ ok: false, error: FAILED.remove });
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
 
@@ -210,7 +217,7 @@ describe("Board when a deletion fails", () => {
     // One message region means a second failure has to visibly replace the
     // first, or the person is looking at a stale message about another card.
     const settlers = deferDeletion();
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
     await act(async () => {
@@ -231,7 +238,7 @@ describe("Board when a deletion fails", () => {
 
   it("clears the message when a later deletion succeeds", async () => {
     const settlers = deferDeletion();
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
     await act(async () => {
@@ -249,7 +256,7 @@ describe("Board when a deletion fails", () => {
 
   it("lets the card be deleted again without a reload", async () => {
     deleteApplication.mockResolvedValue({ ok: false, error: FAILED.remove });
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
     await waitFor(() => expect(screen.getByText("Acme Cloud")).toBeInTheDocument());
@@ -264,7 +271,7 @@ describe("Board when a deletion fails", () => {
     // be deleted again *and moved again*, and a released drag handle is what the
     // second half means.
     deleteApplication.mockResolvedValue({ ok: false, error: FAILED.remove });
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
 
@@ -276,7 +283,7 @@ describe("Board when a deletion fails", () => {
 
 describe("Board opening an application for editing", () => {
   it("opens the form on the card whose control was activated", () => {
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Globex" }));
 
@@ -285,7 +292,7 @@ describe("Board opening an application for editing", () => {
   });
 
   it("changes nothing when the form is dismissed", () => {
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Globex" }));
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
@@ -300,7 +307,7 @@ describe("Board opening an application for editing", () => {
       ok: true,
       data: application("c", "Initech Holdings", ApplicationStatus.INTERVIEW),
     });
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Initech" }));
     fireEvent.change(screen.getByLabelText(/company/i), {
@@ -327,7 +334,7 @@ describe("Board editing an application that no longer exists", () => {
     // dialog that closes and a card that vanishes, which is indistinguishable
     // from a save that worked.
     updateApplicationFromForm.mockResolvedValue({ ok: false, error: "Application not found" });
-    const { rerender } = render(<Board applications={CARDS} />);
+    const { rerender } = render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Initech" }));
     await act(async () => {
@@ -335,7 +342,7 @@ describe("Board editing an application that no longer exists", () => {
     });
 
     // The revalidated list arrives without the row.
-    rerender(<Board applications={CARDS.slice(0, 2)} />);
+    rerender(<Board now={NOW} applications={CARDS.slice(0, 2)} />);
 
     expect(screen.getByRole("dialog", { name: "Edit application" })).toBeVisible();
     expect(screen.getByText("Application not found")).toBeInTheDocument();
@@ -345,13 +352,13 @@ describe("Board editing an application that no longer exists", () => {
 
   it("closes only when the person dismisses it", async () => {
     updateApplicationFromForm.mockResolvedValue({ ok: false, error: "Application not found" });
-    const { rerender } = render(<Board applications={CARDS} />);
+    const { rerender } = render(<Board now={NOW} applications={CARDS} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Initech" }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     });
-    rerender(<Board applications={CARDS.slice(0, 2)} />);
+    rerender(<Board now={NOW} applications={CARDS.slice(0, 2)} />);
 
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
 
@@ -366,7 +373,7 @@ describe("Board holding a deletion that is in flight", () => {
     // closed before the write starts and the card is optimistically removed, so
     // neither control exists while the deletion is outstanding.
     const settlers = deferDeletion();
-    render(<Board applications={CARDS} />);
+    render(<Board now={NOW} applications={CARDS} />);
 
     await confirmDeletionOf("Acme Cloud");
 
@@ -382,5 +389,53 @@ describe("Board holding a deletion that is in flight", () => {
     await act(async () => {
       settlers[0]?.({ ok: true, data: { id: "a" } });
     });
+  });
+});
+
+describe("Board counting every card against one instant", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const SERVED = new Date(TIMESTAMP.getTime() + 12 * DAY);
+
+  it("shows the same count for two cards whose statuses changed together", () => {
+    // Asserted at the board rather than inferred from the prop: this is the
+    // scenario "every card is counted against the same moment", and the board is
+    // where several columns could have disagreed.
+    render(<Board applications={CARDS} now={SERVED} />);
+
+    // Two in Applied, one in Interview - all three measured from one instant.
+    expect(screen.getAllByText("12 days in Applied")).toHaveLength(2);
+    expect(screen.getByText("12 days in Interview")).toBeInTheDocument();
+  });
+
+  it("counts a card 12 days behind the instant as 12", () => {
+    render(<Board applications={CARDS} now={SERVED} />);
+
+    expect(screen.getAllByText("12d")).toHaveLength(3);
+  });
+
+  it("announces a moved card with the column it is now in", async () => {
+    // The announced status is derived from where the card is, so a stale label
+    // would be the badge contradicting its own column. The optimistic move also
+    // resets the clock, so the moved card reads as today.
+    const { rerender } = render(<Board applications={CARDS} now={SERVED} />);
+
+    expect(screen.getByText("12 days in Interview")).toBeInTheDocument();
+
+    // The move itself needs real layout, so the server list arriving with the
+    // new status is what stands in for it here - which is also the state the
+    // board settles into either way.
+    rerender(
+      <Board
+        applications={[
+          CARDS[0] as JobApplication,
+          CARDS[1] as JobApplication,
+          { ...(CARDS[2] as JobApplication), status: ApplicationStatus.OFFER, statusChangedAt: SERVED },
+        ]}
+        now={SERVED}
+      />,
+    );
+
+    expect(screen.getByText("Today in Offer")).toBeInTheDocument();
+    expect(screen.queryByText("12 days in Interview")).toBeNull();
   });
 });

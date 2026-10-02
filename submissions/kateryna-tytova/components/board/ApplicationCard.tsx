@@ -1,6 +1,8 @@
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { Ref } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
+import { BOARD_COLUMNS } from "@/lib/applications/board";
+import { daysInStatus, describeDaysInStatus } from "@/lib/applications/status-age";
 import { isHttpUrl } from "@/lib/applications/validation";
 
 // An outline, not a background tint alone: these controls are icon-only, and a
@@ -45,10 +47,31 @@ interface ApplicationCardProps {
   /** Asks for this application to be deleted, which the board confirms first. */
   onDelete?: (application: JobApplication) => void;
   /**
+   * The instant the board was served, which the day count is measured against.
+   *
+   * Required, with no default. This component is in the client bundle, so it
+   * renders on the server for the HTML and again on hydration; a default that
+   * reached for a clock would give two different numbers and mismatch, while
+   * type-checking and keeping every test green.
+   */
+  now: Date;
+  /**
    * Supplied by DraggableCard. Absent when the card is rendered outside a
    * DndContext, which keeps this component renderable — and testable — on its own.
    */
   dragHandle?: DragHandleBinding;
+}
+
+/**
+ * The human-readable name of a status, from the one place that owns the five.
+ *
+ * A stored status outside the five is possible — SQLite does not enforce the
+ * enum — and such a row is left off the board entirely, so this is only ever
+ * asked about a status that has a column. The fallback exists because the type
+ * cannot say that, not because it is expected.
+ */
+function statusLabel(status: JobApplication["status"]): string {
+  return BOARD_COLUMNS.find((column) => column.status === status)?.label ?? status;
 }
 
 export function ApplicationCard({
@@ -56,6 +79,7 @@ export function ApplicationCard({
   isCardBusy = false,
   onEdit,
   onDelete,
+  now,
   dragHandle,
 }: ApplicationCardProps) {
   // Re-checked here, not only on write: seed.ts and direct database edits never
@@ -64,6 +88,10 @@ export function ApplicationCard({
   const postingUrl =
     application.link !== null && isHttpUrl(application.link) ? application.link : null;
   const companyId = `card-${application.id}-company`;
+  const age = describeDaysInStatus(
+    daysInStatus(application.statusChangedAt, now),
+    statusLabel(application.status),
+  );
 
   return (
     // Named, so card-by-card navigation says which application it lands on
@@ -146,6 +174,21 @@ export function ApplicationCard({
 
       <p className="line-clamp-2 break-words text-sm leading-5 text-slate-600">
         {application.position}
+      </p>
+
+      {/* Its own row, not the header: that row is already three controls beside a
+          heading that is the only flexible item in it, and the heading's clamp is
+          what the layout test measures. shrink-0 and tabular-nums so a four-digit
+          count cannot reflow the row it sits in. */}
+      <p className="mt-2 flex">
+        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-500">
+          {/* Real text in an .sr-only span rather than an aria-label: a bare
+              <span> carries ARIA's name-prohibited `generic` role, so a label on
+              it is not something a screen reader can be relied on to announce.
+              The same split BoardColumn's count already makes. */}
+          <span aria-hidden="true">{age.short}</span>
+          <span className="sr-only">{age.full}</span>
+        </span>
       </p>
       {postingUrl !== null ? (
         <a

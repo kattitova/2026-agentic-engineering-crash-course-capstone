@@ -25,15 +25,24 @@ export interface BoardCards {
  * to have one. Here it is a sequence of changes over one list.
  */
 type BoardChange =
-  | { kind: "move"; cardId: string; to: JobApplication["status"] }
+  | { kind: "move"; cardId: string; to: JobApplication["status"]; at: Date }
   | { kind: "remove"; cardId: string };
 
 function applyChange(applications: JobApplication[], change: BoardChange): JobApplication[] {
   if (change.kind === "remove") {
+    // Filters, never rewrites: a deleted card has no badge to update, and a
+    // second side effect here is the kind of thing a merged reducer acquires
+    // without anyone noticing.
     return applications.filter((application) => application.id !== change.cardId);
   }
   return applications.map((application) =>
-    application.id === change.cardId ? { ...application, status: change.to } : application,
+    application.id === change.cardId
+      ? // statusChangedAt as well as status. The write this stands for provably
+        // resets it - planStatusChange does, on any real status change - so a
+        // card showing its old day count in a new column would be stating the
+        // one thing the board knows to be wrong.
+        { ...application, status: change.to, statusChangedAt: change.at }
+      : application,
   );
 }
 
@@ -41,11 +50,15 @@ function applyChange(applications: JobApplication[], change: BoardChange): JobAp
  * Coordinates the board's writes: optimistic placement or removal, the write
  * itself, which cards are held while writing, and the failure message.
  *
+ * `now` is the instant the board was served. It is required rather than
+ * defaulted: a default would let a caller forget it and have this reach for a
+ * clock, which is the one thing the day-count design removes.
+ *
  * Separate from Board because dnd-kit cannot be driven in jsdom — it needs real
  * layout — so none of this would be testable if it lived in the component. Here
  * it is reachable with the actions mocked.
  */
-export function useBoardCards(applications: JobApplication[]): BoardCards {
+export function useBoardCards(applications: JobApplication[], now: Date): BoardCards {
   // Derived from the server list each render, so once revalidation lands the
   // stored data wins by construction rather than by manual reconciliation.
   const [shown, addOptimisticChange] = useOptimistic(applications, applyChange);
@@ -101,11 +114,14 @@ export function useBoardCards(applications: JobApplication[]): BoardCards {
   const moveCard = useCallback(
     (move: CardMove) =>
       run(
-        { kind: "move", cardId: move.cardId, to: move.to },
+        // The instant the board was served, not a fresh one: a rendered number
+        // must not come from the client clock, and the difference between the
+        // two is at most the age of the page.
+        { kind: "move", cardId: move.cardId, to: move.to, at: now },
         () => updateApplicationStatus(move.cardId, move.to),
         FAILED.move,
       ),
-    [run],
+    [run, now],
   );
 
   /**
