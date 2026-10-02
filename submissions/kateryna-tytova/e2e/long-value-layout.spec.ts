@@ -275,3 +275,110 @@ test("a long unbroken value does not change any column's width", async ({ page }
     (column?.x ?? 0) + (column?.width ?? 0) + TOLERANCE,
   );
 });
+
+/**
+ * Enough extra applications to take the board's total to a four-digit number.
+ *
+ * One `db.transaction`, not a thousand separate statements: the same mechanism
+ * `resetBoard` uses to restore the snapshot, so inserting a thousand rows costs
+ * one commit and the `beforeEach` reset cleans all of them up in one more.
+ *
+ * Wishlist, so the share stays where it was and the only thing this changes is
+ * the width of the total. A thousand cards that counted towards the percentage
+ * would move two figures at once, and the measurement could not say which.
+ */
+function insertApplicationsUpTo(total: number): void {
+  withDatabase((db) => {
+    const existing = (
+      db.prepare("SELECT COUNT(*) AS count FROM JobApplication").get() as { count: number }
+    ).count;
+    const now = Date.now();
+    const insert = db.prepare(
+      `INSERT INTO JobApplication
+         (id, company, position, status, link, notes, appliedDate, statusChangedAt, createdAt, updatedAt)
+       VALUES (?, ?, ?, 'WISHLIST', NULL, NULL, NULL, ?, ?, ?)`,
+    );
+    db.transaction(() => {
+      for (let index = existing; index < total; index += 1) {
+        insert.run(
+          `e2e-bulk-${index}`,
+          `Company ${index}`,
+          "Developer",
+          storedInstant(now),
+          storedInstant(now),
+          storedInstant(now),
+        );
+      }
+    })();
+  });
+}
+
+test("the summary does not change any column's width", async ({ page }) => {
+  // The control for the four-digit case below: the summary measured at the size
+  // it has on the seeded board, so a width change there cannot be blamed on the
+  // summary merely existing.
+  await page.goto("/");
+
+  const summary = page.getByRole("region", { name: "Application summary" });
+  await expect(summary).toBeVisible();
+  await expect(summary).toContainText("3 applications");
+
+  const widths = await columnWidths(page);
+  expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(TOLERANCE);
+  expect(await scrollsHorizontally(page)).toBe(false);
+});
+
+/**
+ * Every column's left edge, and the top of the grid.
+ *
+ * The spec scenario asks for width *and position*, and width alone would pass a
+ * summary that wrapped onto an extra line and pushed the whole grid down.
+ *
+ * The top is taken from Wishlist alone, deliberately. Wishlist is always the
+ * first column of the first row, so its top edge is what a taller summary would
+ * move. The other columns' tops are not compared: a thousand cards make the
+ * Wishlist column enormously tall, and in the wrapped project that legitimately
+ * pushes the second row down. That is the cards doing it, not the figure, and
+ * asserting it would make this test fail for the one reason the scenario is not
+ * about.
+ */
+async function columnLefts(page: Page): Promise<{ lefts: number[]; gridTop: number }> {
+  const lefts: number[] = [];
+  for (const name of COLUMNS) {
+    const box = await page.getByRole("region", { name }).boundingBox();
+    expect(box, `column ${name} has no box`).not.toBeNull();
+    lefts.push(box?.x ?? 0);
+  }
+  const first = await page.getByRole("region", { name: COLUMNS[0] }).boundingBox();
+  return { lefts, gridTop: first?.y ?? 0 };
+}
+
+test("a four-digit total does not change any column's width or position", async ({ page }) => {
+  await page.goto("/");
+  const before = await columnWidths(page);
+  const positionBefore = await columnLefts(page);
+  expect(await scrollsHorizontally(page)).toBe(false);
+
+  insertApplicationsUpTo(1000);
+  await page.reload();
+
+  // The figure is really four digits, so the measurement is of a board that
+  // shows it rather than of one where the insert silently did nothing.
+  await expect(page.getByRole("region", { name: "Application summary" })).toContainText(
+    "1000 applications",
+  );
+
+  const after = await columnWidths(page);
+  after.forEach((width, index) => {
+    expect(Math.abs(width - (before[index] ?? 0))).toBeLessThanOrEqual(TOLERANCE);
+  });
+
+  const positionAfter = await columnLefts(page);
+  positionAfter.lefts.forEach((left, index) => {
+    expect(Math.abs(left - (positionBefore.lefts[index] ?? 0))).toBeLessThanOrEqual(TOLERANCE);
+  });
+  // The grid did not move down, so the summary did not grow a line.
+  expect(Math.abs(positionAfter.gridTop - positionBefore.gridTop)).toBeLessThanOrEqual(TOLERANCE);
+
+  expect(await scrollsHorizontally(page)).toBe(false);
+});

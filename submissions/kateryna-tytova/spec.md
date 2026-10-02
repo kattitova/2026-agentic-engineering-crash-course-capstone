@@ -374,3 +374,47 @@ plan, and why. Empty is fine on Day 0.)_
   which now names the shape of a web address with an example rather than only
   calling the value invalid - the one fault reached by hand is a bare domain, and
   "invalid" does not say what is missing.
+
+- **2026-10-02 — "% that reached interview" counts a *current* status of Interview
+  or Offer, measured against every tracked application (MVP item 7).** Both halves
+  were forks with no answer in the code, so they are recorded here rather than left
+  to be re-derived. The data model stores one status per application and the moment
+  it was last set, with no log of the transitions it passed through, so a Rejected
+  application cannot be known to have been interviewed before the rejection.
+  Counting Rejected as reached was the alternative and was rejected: it treats every
+  rejection as post-interview, so a board of applications silently rejected at the
+  Applied stage would report a high interview rate — an error in the flattering
+  direction, on the one figure whose job is to say whether the search is working.
+  The cost is a known undercount in the other direction, which is why the region
+  names what it counts on screen instead of leaving the number to be interpreted. A
+  transition log in `prisma/schema.prisma` is the only way to make the figure exact
+  and is its own change, with its own entry here.
+
+  The denominator is the total shown beside it, Wishlist included. A truer
+  conversion rate would exclude Wishlist — a bookmark is not an application that
+  was sent, which is the argument MVP item 6 uses to refuse to flag an old Wishlist
+  card — but the two figures share one line, and a percentage taken against a
+  different set than the number next to it cannot be checked by eye and needs a
+  third label to explain itself. One set, two figures.
+
+  The share is a whole number, clamped away from both ends: 0% only when none
+  reached interview, 100% only when all did. Ordinary rounding crosses both
+  boundaries with plausible numbers — 1 of 201 rounds to 0%, 200 of 201 to 100% —
+  and each of those reports the opposite of the thing the person is looking for.
+  The accepted cost is that 1 of 201 and 2 of 201 both read 1%.
+
+  No data-model change, so no `npx prisma db push`: both figures are derived from
+  rows the board already reads.
+
+- **2026-10-02 — layout guarantees are measured in a browser, never in jsdom.**
+  The first plan for MVP item 7 assigned "a large total does not distort the board"
+  to a component test asserting that the region "does not overflow" and "wraps".
+  Vitest runs `environment: "node"` with jsdom opted in per file, and jsdom has no
+  layout engine: every element measures zero, so the only way to write that test is
+  an assertion on a class substring — which `measure-long-value-layout` already
+  deleted from this project as a test that "could not fail for any reason the spec
+  cares about". The proposal review caught it before any code was written, and also
+  showed the excuse behind it to be false: `e2e/long-value-layout.spec.ts` inserts
+  rows straight into `e2e.db` with better-sqlite3, and `resetBoard` restores the
+  snapshot in one transaction, so a four-digit total is a thousand rows in one
+  commit. It is now measured there, in a real browser, at both viewports.

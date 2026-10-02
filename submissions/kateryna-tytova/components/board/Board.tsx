@@ -22,7 +22,9 @@ import {
   type ColumnRect,
 } from "@/lib/applications/move";
 import { isApplicationStatus } from "@/lib/applications/status";
+import { summariseBoard } from "@/lib/applications/stats";
 import { BoardColumn } from "./BoardColumn";
+import { BoardStats } from "./BoardStats";
 import { useBoardCards } from "./useBoardCards";
 
 /**
@@ -165,6 +167,15 @@ export function Board({
       // press is silently swallowed. Reproduced as a 3-in-15 e2e flake.
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
     >
+      {/* Summarised from `grouped`, which comes from `shown` - the optimistic
+          list - and not from the server list in app/page.tsx. That is the whole
+          reason this sits in the client tree: a card dropped into Interview under
+          a percentage that had not moved yet would have the page contradicting
+          itself on screen, which is the same trade the day badge already refused.
+          `grouped` is also what makes the total equal the number of cards, since
+          it is the cards. */}
+      <BoardStats summary={summariseBoard(grouped)} />
+
       {/* Assertive: a move that did not happen has to interrupt, because the card
           moving back is easy to miss. Always rendered so the region exists before
           the message does. */}

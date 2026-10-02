@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
 import { FAILED, type ActionResult } from "@/lib/applications/action-result";
+import { groupApplicationsByStatus } from "@/lib/applications/board";
 import type { CardMove } from "@/lib/applications/move";
+import { summariseBoard } from "@/lib/applications/stats";
 import { useBoardCards } from "./useBoardCards";
 
 const { updateApplicationStatus, deleteApplication } = vi.hoisted(() => ({
@@ -495,5 +497,75 @@ describe("useBoardCards: the badge follows a move", () => {
     expect(result.current.shown.find((item) => item.id === "a")?.statusChangedAt).toEqual(
       TIMESTAMP,
     );
+  });
+});
+
+describe("the summary the board derives from a move", () => {
+  // The move half of "the figures follow a card move or a deletion". It lives
+  // here rather than at board level because a move needs real layout, which jsdom
+  // does not have: `Board` computes summariseBoard(groupApplicationsByStatus(shown))
+  // and `shown` is what this hook returns, so asserting it here asserts the same
+  // value the board renders.
+  const summaryOf = (cards: readonly JobApplication[]) =>
+    summariseBoard(groupApplicationsByStatus(cards));
+
+  it("shows the card in the counted set before the write settles", async () => {
+    const settlers = deferAction();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    // One Applied, one Wishlist: nothing has reached interview yet.
+    expect(summaryOf(result.current.shown).percentReachedInterview).toBe(0);
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW));
+    });
+
+    await waitFor(() =>
+      expect(summaryOf(result.current.shown).percentReachedInterview).toBe(50),
+    );
+    expect(summaryOf(result.current.shown).total).toBe(2);
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: application("a", ApplicationStatus.INTERVIEW) });
+    });
+  });
+
+  it("puts the figures back when the move fails", async () => {
+    // Nothing restores them explicitly: the optimistic change is dropped and the
+    // server list wins, which is the same mechanism that returns the card to its
+    // column. The status was not stored, so the share was not either.
+    const settlers = deferAction();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    act(() => {
+      result.current.moveCard(moveOf("a", ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW));
+    });
+    await waitFor(() =>
+      expect(summaryOf(result.current.shown).percentReachedInterview).toBe(50),
+    );
+
+    await act(async () => {
+      settlers[0]?.({ ok: false, error: FAILED.move });
+    });
+
+    expect(summaryOf(result.current.shown).percentReachedInterview).toBe(0);
+    expect(summaryOf(result.current.shown).total).toBe(2);
+  });
+
+  it("leaves both figures alone for a move between two uncounted columns", async () => {
+    const settlers = deferAction();
+    const { result } = renderHook(() => useBoardCards(APPLICATIONS, SERVED_AT));
+
+    act(() => {
+      result.current.moveCard(moveOf("b", ApplicationStatus.WISHLIST, ApplicationStatus.APPLIED));
+    });
+    await waitFor(() => expect(result.current.isCardBusy("b")).toBe(true));
+
+    expect(summaryOf(result.current.shown).total).toBe(2);
+    expect(summaryOf(result.current.shown).percentReachedInterview).toBe(0);
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: application("b", ApplicationStatus.APPLIED) });
+    });
   });
 });

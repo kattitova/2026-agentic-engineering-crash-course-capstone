@@ -493,3 +493,161 @@ describe("Board flagging applications that have gone quiet", () => {
     expect(screen.queryByText("No movement")).toBeNull();
   });
 });
+
+describe("Board summarising the whole board above it", () => {
+  const summary = () =>
+    screen.getByRole("region", { name: "Application summary" }).textContent ?? "";
+
+  it("shows the summary before the columns in reading order", () => {
+    render(<Board applications={CARDS} now={NOW} />);
+
+    const region = screen.getByRole("region", { name: "Application summary" });
+    const wishlist = screen.getByRole("region", { name: "Wishlist" });
+
+    // Node.DOCUMENT_POSITION_FOLLOWING: the column comes after the summary.
+    expect(region.compareDocumentPosition(wishlist) & 4).toBe(4);
+  });
+
+  it("counts the cards the board actually shows", () => {
+    // CARDS is two in Applied and one in Interview: 3 tracked, 1 reached.
+    render(<Board applications={CARDS} now={NOW} />);
+
+    expect(summary()).toContain("3 applications");
+    expect(summary()).toContain("33% reached interview");
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+  });
+
+  it("leaves a row with an unrecognised status out of the total and out of the share", () => {
+    // SQLite does not enforce the enum, so such a row can be stored. The board
+    // already drops it from the columns; the total has to agree with the cards,
+    // because that agreement is the only cross-check the person has.
+    const stored = [...CARDS, application("d", "Zombie Corp", "ARCHIVED" as ApplicationStatus)];
+
+    render(<Board applications={stored} now={NOW} />);
+
+    expect(summary()).toContain("3 applications");
+    expect(screen.getAllByRole("article")).toHaveLength(3);
+    expect(screen.queryByText("Zombie Corp")).toBeNull();
+  });
+
+  it("re-measures both figures before a deletion's write settles", async () => {
+    // The test that pins the figures to the optimistic list. While the write is
+    // outstanding the server list still holds three applications, so a summary
+    // computed in app/page.tsx from that list would still read "3 applications"
+    // and 33% here. Deleting an Applied card leaves 1 of 2.
+    const settlers = deferDeletion();
+    render(<Board applications={CARDS} now={NOW} />);
+
+    expect(summary()).toContain("3 applications");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Acme Cloud" }));
+    await act(async () => {
+      fireEvent.click(await screen.findByRole("button", { name: /delete application/i }));
+    });
+
+    await waitFor(() => expect(summary()).toContain("2 applications"));
+    expect(summary()).toContain("50% reached interview");
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: { id: "a" } });
+    });
+  });
+
+  it("drops to no applications and no percentage when the last one is deleted", async () => {
+    const settlers = deferDeletion();
+    const only = [CARDS[2] as JobApplication];
+    render(<Board applications={only} now={NOW} />);
+
+    expect(summary()).toContain("1 application");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Initech" }));
+    await act(async () => {
+      fireEvent.click(await screen.findByRole("button", { name: /delete application/i }));
+    });
+
+    await waitFor(() => expect(summary()).toContain("No applications yet"));
+    // Not "0%": a share of an empty set is not zero.
+    expect(summary()).not.toContain("%");
+
+    await act(async () => {
+      settlers[0]?.({ ok: true, data: { id: "c" } });
+    });
+  });
+
+  it("leaves both figures as they were when a deletion fails", async () => {
+    deleteApplication.mockResolvedValue({ ok: false, error: FAILED.remove });
+    render(<Board applications={CARDS} now={NOW} />);
+
+    await confirmDeletionOf("Acme Cloud");
+
+    // Nothing restores them explicitly: the optimistic change is dropped and the
+    // server list wins, which is the same mechanism that returns a card to its
+    // column. This test exists to pin that the figures ride on that list alone.
+    await waitFor(() => expect(summary()).toContain("3 applications"));
+    expect(summary()).toContain("33% reached interview");
+  });
+
+  it("raises the share when a card arrives in Interview", () => {
+    // The move itself needs real layout, so the server list arriving with the new
+    // status stands in for it - the same substitution the badge and flag tests
+    // make, and the state the board settles into either way.
+    const { rerender } = render(<Board applications={CARDS} now={NOW} />);
+    expect(summary()).toContain("33% reached interview");
+
+    rerender(
+      <Board
+        applications={[
+          { ...(CARDS[0] as JobApplication), status: ApplicationStatus.INTERVIEW },
+          CARDS[1] as JobApplication,
+          CARDS[2] as JobApplication,
+        ]}
+        now={NOW}
+      />,
+    );
+
+    expect(summary()).toContain("67% reached interview");
+    expect(summary()).toContain("3 applications");
+  });
+
+  it("lowers the share when a card leaves the counted set for Rejected", () => {
+    const { rerender } = render(<Board applications={CARDS} now={NOW} />);
+    expect(summary()).toContain("33% reached interview");
+
+    rerender(
+      <Board
+        applications={[
+          CARDS[0] as JobApplication,
+          CARDS[1] as JobApplication,
+          { ...(CARDS[2] as JobApplication), status: ApplicationStatus.REJECTED },
+        ]}
+        now={NOW}
+      />,
+    );
+
+    expect(summary()).toContain("0% reached interview");
+  });
+
+  it("changes neither figure when a card moves from Wishlist to Applied", () => {
+    // Correct, and asserted on purpose: neither status is counted and the total
+    // did not change, so a motionless summary here is the right answer rather
+    // than a figure that failed to update.
+    const stored = [...CARDS, application("d", "Northwind", ApplicationStatus.WISHLIST)];
+    const { rerender } = render(<Board applications={stored} now={NOW} />);
+
+    expect(summary()).toContain("4 applications");
+    expect(summary()).toContain("25% reached interview");
+
+    rerender(
+      <Board
+        applications={[
+          ...CARDS,
+          application("d", "Northwind", ApplicationStatus.APPLIED),
+        ]}
+        now={NOW}
+      />,
+    );
+
+    expect(summary()).toContain("4 applications");
+    expect(summary()).toContain("25% reached interview");
+  });
+});
