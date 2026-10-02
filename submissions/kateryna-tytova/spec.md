@@ -273,3 +273,16 @@ plan, and why. Empty is fine on Day 0.)_
   wrong. A failed move needs no handling of its own — the optimistic change is
   dropped and the server list, carrying the original moment, wins, which is the
   same mechanism that already returns the card to its column.
+
+- **2026-10-02 — a colour that clears AA on white can fail on a tinted
+  background.** The day badge took `text-slate-500` from `BoardColumn`'s count,
+  where it sits on `bg-white` and clears the 4.5:1 minimum at 4.76:1. On the
+  badge's `bg-slate-100` the same colour is 4.34:1, which fails for 12px text;
+  it is now `text-slate-600` at 6.92:1. Found by the 2026-10-02 review pass
+  (`R20261002-3`) and recomputed before changing anything. Recorded here rather
+  than left as a code comment because MVP item 6 is a *visual* flag for stale
+  applications: whoever writes it will pick a colour, probably on a tint, and
+  copying a pair that passes elsewhere is exactly how this one broke. Compute the
+  ratio against the background it will actually sit on — and leave margin,
+  because Tailwind 4 defines these as oklch and the sRGB hexes those numbers come
+  from are close but not identical.
