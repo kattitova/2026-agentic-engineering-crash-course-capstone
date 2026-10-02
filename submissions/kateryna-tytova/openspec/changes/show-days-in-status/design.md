@@ -177,6 +177,14 @@ shares.
   and the drag silently never starts, which `move-card.spec.ts` had already paid for with a 3-in-15
   flake and a helper full of waits. That helper moves to `e2e/keyboard-move.ts` and is shared rather
   than copied, so there is no second version free to drift back to the racy one.
+- **Nothing automated asserts the page hydrates without a mismatch** → held by the type system
+  instead: `now` is required at every level, so adding a `new Date()` at a call site is a compile
+  error rather than a silent second clock. A browser test listening for React's hydration warning
+  was considered and rejected on evidence, not effort: the e2e suite deliberately runs a production
+  build (`next build && next start`, for the reasons `playwright.config.ts` records), and in
+  production React does not log that warning — a mismatch becomes a silent client re-render. The
+  test would pass whether or not the defect existed, which is the hollow-evidence class this project
+  has already deleted assertions for.
 - **Two readers of `statusChangedAt` once item 6 lands** → why `daysInStatus` is a function of two
   instants and knows nothing about badges or thresholds. Item 6 compares its result; it does not
   re-derive it.

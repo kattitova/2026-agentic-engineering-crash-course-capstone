@@ -181,7 +181,12 @@ export function ApplicationCard({
           what the layout test measures. shrink-0 and tabular-nums so a four-digit
           count cannot reflow the row it sits in. */}
       <p className="mt-2 flex">
-        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-500">
+        {/* slate-600, not the slate-500 BoardColumn's count uses. That badge sits
+            on bg-white and clears AA at 4.76:1; the same colour on this bg-slate-100
+            is 4.34:1, under the 4.5:1 minimum for 12px text. slate-600 is 6.92:1,
+            which leaves room for Tailwind 4's oklch values not being exactly the
+            sRGB hexes those numbers were computed from. */}
+        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
           {/* Real text in an .sr-only span rather than an aria-label: a bare
               <span> carries ARIA's name-prohibited `generic` role, so a label on
               it is not something a screen reader can be relied on to announce.

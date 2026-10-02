@@ -115,8 +115,12 @@ test("says today rather than zero days for a card under a day old", async ({ pag
   await page.goto("/");
 
   const card = column(page, "Wishlist").getByRole("article", { name: "Pendant Publishing" });
-  // 20 hours is a previous calendar date and still not a whole day, which is the
-  // case that separates elapsed days from calendar days.
+  // What this measures is only that under a whole day reads as today. It is
+  // tempting to call it the calendar-boundary case, but 20 hours before now is
+  // the previous UTC date only on a run that starts before 20:00 UTC - after
+  // that the inserted moment is same-date and the distinction is not exercised.
+  // That case is pinned with fixed instants in lib/applications/status-age.test.ts,
+  // where it cannot depend on when the suite runs.
   await expect(card.getByText("Today", { exact: true })).toBeVisible();
   await expect(card.getByText("Today in Wishlist")).toBeAttached();
 });

@@ -103,7 +103,7 @@ make, and the component and its test land together.
       anything it reports, so the cheap mechanical gate has run before any review session is spent.
       It is a skill, not a CLI command — `openspec` itself offers only `validate`, `status` and
       `doctor`, and `openspec verify` would simply fail
-- [ ] 5.8 **Offer** the user an independent `reviewer` pass on the diff and **wait for their
+- [x] 5.8 **Offer** the user an independent `reviewer` pass on the diff and **wait for their
       answer**. Do not launch it unprompted — this task is a reminder to ask, not authorization.
       If they accept, record the outcome under `docs/reviews/` and index it in `docs/review-log.md`;
       if they decline, that is their call and nothing is recorded
