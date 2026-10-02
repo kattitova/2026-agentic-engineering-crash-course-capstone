@@ -158,7 +158,11 @@ After completing all artifacts, summarize:
   > "Before apply: shall I hand this to the `proposal-reviewer` agent? It reads the plan against
   > `spec.md`, `AGENTS.md` and the real code, and returns PASS / PASS WITH NOTES / REVISE PROPOSAL."
 
-  On yes, spawn `proposal-reviewer` with the change name and stop there — reading its verdict is a
+  On yes, launch it the sanctioned way and stop there:
+  `node .claude/hooks/review.mjs "<change>" --agent proposal-reviewer` — **not** the Agent tool,
+  which would skip the settings file that is the only enforced version of "may not edit the
+  artifacts", and pass it the change name only, with nothing added about what to check
+  (`AGENTS.md` → "How a review is launched, and what it is told"). Reading its verdict is a
   separate turn, and a REVISE PROPOSAL verdict is handled by `/opsx:update`, never by apply. On no,
   record nothing and move on; the offer is made once and is not repeated.
 - Prompt: "The artifacts are ready for review. When you are ready, run `/opsx:apply` or ask me to apply this change."

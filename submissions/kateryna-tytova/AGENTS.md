@@ -93,6 +93,23 @@ wasted. The same applies to a re-review after fixes: offer it, do not start it.
 A task that could be read as authorizing a silent launch is a proposal defect —
 `proposal-reviewer` flags it under its task checklist.
 
+### How a review is launched, and what it is told
+
+`node .claude/hooks/review.mjs <change> [--agent reviewer|proposal-reviewer] [--bg]` — by hand,
+after a human yes. Both agents go through that launcher, and not through the Agent tool, because an
+in-process sub-agent **inherits this session's permissions**: `--settings` never applies, so the
+deny rules that are the only enforced version of "never fix anything" and "never edit the proposal"
+are silently absent. Their agent definitions are prompt-level contracts; the settings file is the
+part that actually holds.
+
+**A review agent is given the change name and nothing else.** What to look for lives in its
+definition, which it reads cold. Handing it a list of things to check — even an accurate one, even
+framed as "don't take the artifacts on trust" — converts an independent pass into the execution of
+a checklist written by the session under review: it then finds what it was pointed at, and the
+author's blind spots become the review's. The launcher therefore has no way to add to the prompt and
+refuses extra arguments rather than appending them. If a pass was nonetheless steered, the review
+file says so in its header, and its "found nothing" is worth less than a neutral one's.
+
 Each agent has a sibling settings file (`.claude/reviewer-settings.json`,
 `.claude/proposal-reviewer-settings.json`) that denies the writes its role forbids, for running it
 as a standalone session: `claude --settings .claude/proposal-reviewer-settings.json`.

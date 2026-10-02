@@ -166,8 +166,13 @@ findings are fixed. One line is enough:
 > "`npm run verify` and `openspec verify` are clean. Shall I hand the diff to the `reviewer` agent
 > (separate session, maker ≠ checker)? It returns PASS / PASS WITH NOTES / CHANGES REQUESTED."
 
-Then stop and wait. After fixes, re-run both verify steps and offer the re-review the same way.
-Do not run `/opsx:archive` while a review is outstanding.
+Then stop and wait. On yes, launch it as `node .claude/hooks/review.mjs "<change>"` — **not** the
+Agent tool, which would skip the settings file that is the only enforced version of "never fix
+anything" — and pass the change name only, with nothing added about what to check (`AGENTS.md` →
+"How a review is launched, and what it is told").
+
+After fixes, re-run both verify steps and offer the re-review the same way. Do not run
+`/opsx:archive` while a review is outstanding.
 
 **Output On Pause (Issue Encountered)**
 
