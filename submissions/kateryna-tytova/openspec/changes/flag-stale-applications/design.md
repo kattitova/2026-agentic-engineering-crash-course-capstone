@@ -113,6 +113,14 @@ not being the sRGB hexes the ratio is computed from. If the first pairing does n
 text colour darkens rather than the tint lightening, because the tint also has to stay
 distinguishable from the neutral badge beside it.
 
+**Resolved: `text-amber-800` on `bg-amber-100`, 6.37:1.** The procedure above ran and the first
+pairing did not survive it. `amber-700` on `amber-100` is 4.51:1 — over the minimum by 0.01, which
+is no margin at all for the oklch difference, so the text darkened one step exactly as this decision
+said it would. `amber-600`, the colour one reaches for because it is *the* warning colour, is 2.86:1
+and fails outright; that is the whole value of computing the ratio before writing the class rather
+than after. 6.37:1 also sits beside the neutral badge's 6.92:1, so the two pills read as a pair
+rather than one looking washed out next to the other.
+
 ### Nothing new for the optimistic move
 
 The `move` change already sets `status` and `statusChangedAt` together, and the flag is derived from
