@@ -84,6 +84,31 @@ test("shows how many whole days a card has been in its status", async ({ page })
   await expect(card.getByText("12 days in Applied")).toBeAttached();
 });
 
+test("shows a higher count once the card has been in its status longer", async ({ page }) => {
+  // The count is recomputed from the stored moment on every request, not frozen
+  // into the page. Ageing the row rather than waiting a day is the same
+  // measurement: what must not happen is the board serving yesterday's number.
+  insertAgedApplication("e2e-ageing", "Sirius Cybernetics", "REJECTED", 12);
+  await page.goto("/");
+
+  const rejected = column(page, "Rejected");
+  await expect(
+    rejected.getByRole("article", { name: "Sirius Cybernetics" }).getByText("12d"),
+  ).toBeVisible();
+
+  withDatabase((db) => {
+    db.prepare("UPDATE JobApplication SET statusChangedAt = ? WHERE id = ?").run(
+      storedInstant(Date.now() - 13 * DAY - 12 * HOUR),
+      "e2e-ageing",
+    );
+  });
+  await page.reload();
+
+  const card = column(page, "Rejected").getByRole("article", { name: "Sirius Cybernetics" });
+  await expect(card.getByText("13d")).toBeVisible();
+  await expect(card.getByText("13 days in Rejected")).toBeAttached();
+});
+
 test("says today rather than zero days for a card under a day old", async ({ page }) => {
   insertAgedApplication("e2e-fresh", "Pendant Publishing", "WISHLIST", 0, 20);
 

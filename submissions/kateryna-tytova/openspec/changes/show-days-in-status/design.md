@@ -161,10 +161,22 @@ shares.
   it (`docs/reviews/decisions.md`), and a `shrink-0` element with a min-content width is the same
   mechanism that broke the heading.
 - **The e2e seed's fixed dates mean a hardcoded expected number would rot by one a day** → the
-  end-to-end assertion computes its expectation from the row's stored `statusChangedAt`, which the
-  specs already read through `withDatabase`. Changing the seed to now-relative dates was considered
-  and rejected: byte-identical reseeds were a deliberate earlier decision, and `resetBoard` restores
-  from a snapshot of those exact rows.
+  end-to-end assertions insert their own rows at a controlled age instead. Computing the expectation
+  from a seeded row was the first plan and is not enough: those instants sit on 09:00:00Z, and both
+  the test process's clock and the server's request instant floor against that same edge, so a run
+  straddling 09:00 UTC disagrees by one. A half-day offset puts the flooring boundary twelve hours
+  from either clock. Changing the seed to now-relative dates was considered and rejected: byte-
+  identical reseeds were a deliberate earlier decision, and `resetBoard` restores from a snapshot of
+  those exact rows.
+- **A row inserted by a spec must be the shape Prisma writes** → Prisma 7 stores a `DateTime` as ISO
+  text with an offset, not epoch milliseconds. Writing a number works, because Prisma coerces on the
+  way out, which is why the existing helpers got away with it while nothing read those dates — and
+  it broke the moment an assertion compared two stored instants. `storedInstant` and
+  `parseStoredInstant` in `e2e/reset-board.ts` own that format so no spec decides it again.
+- **A keyboard move is three key presses that must not be sent back to back** → the sensor is raced
+  and the drag silently never starts, which `move-card.spec.ts` had already paid for with a 3-in-15
+  flake and a helper full of waits. That helper moves to `e2e/keyboard-move.ts` and is shared rather
+  than copied, so there is no second version free to drift back to the racy one.
 - **Two readers of `statusChangedAt` once item 6 lands** → why `daysInStatus` is a function of two
   instants and knows nothing about badges or thresholds. Item 6 compares its result; it does not
   re-derive it.

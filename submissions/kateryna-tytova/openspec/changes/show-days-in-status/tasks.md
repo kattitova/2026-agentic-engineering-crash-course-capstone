@@ -99,7 +99,7 @@ make, and the component and its test land together.
 - [x] 5.5 Run `npm run verify` and verify it passes with no errors
 - [x] 5.6 Run the full `npm run test:e2e` and verify it passes, asking the user first for the same
       reason as 4.7
-- [ ] 5.7 Run the `openspec-verify-change` skill (`/opsx:verify show-days-in-status`) and fix
+- [x] 5.7 Run the `openspec-verify-change` skill (`/opsx:verify show-days-in-status`) and fix
       anything it reports, so the cheap mechanical gate has run before any review session is spent.
       It is a skill, not a CLI command — `openspec` itself offers only `validate`, `status` and
       `doctor`, and `openspec verify` would simply fail
