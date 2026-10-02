@@ -62,7 +62,7 @@ function optionalText(value: unknown): string | null | undefined {
 }
 
 /** Exported so the render path can re-check a stored value it did not write. */
-export function isHttpUrl(value: string): boolean {
+export function isAcceptableLink(value: string): boolean {
   try {
     const { protocol } = new URL(value);
     return protocol === "http:" || protocol === "https:";
@@ -113,7 +113,7 @@ export function validateApplicationInput(raw: RawApplicationInput): ValidationRe
   }
 
   const link = optionalText(raw.link);
-  if (link === undefined || (link !== null && !isHttpUrl(link))) {
+  if (link === undefined || (link !== null && !isAcceptableLink(link))) {
     errors.link = "Link must be a valid http(s) URL";
   } else {
     // The length check comes second: a value that is not a URL at all is worth

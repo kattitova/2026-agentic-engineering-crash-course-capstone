@@ -8,7 +8,7 @@ import {
   hasNoMovement,
   STALE_AFTER_DAYS,
 } from "@/lib/applications/status-age";
-import { isHttpUrl } from "@/lib/applications/validation";
+import { isAcceptableLink } from "@/lib/applications/validation";
 
 // An outline, not a background tint alone: these controls are icon-only, and a
 // tint is the one focus indicator that disappears against a card that is itself
@@ -91,7 +91,7 @@ export function ApplicationCard({
   // pass through validateApplicationInput, and a stored javascript: URL would be
   // one click from executing.
   const postingUrl =
-    application.link !== null && isHttpUrl(application.link) ? application.link : null;
+    application.link !== null && isAcceptableLink(application.link) ? application.link : null;
   const companyId = `card-${application.id}-company`;
   const age = describeDaysInStatus(
     daysInStatus(application.statusChangedAt, now),
