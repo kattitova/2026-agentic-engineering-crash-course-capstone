@@ -98,7 +98,7 @@ it pass. Nothing else here is new logic — the optimistic move already sets bot
 - [x] 5.2 Run `npm run verify` and verify it passes with no errors
 - [x] 5.3 Run the `openspec-verify-change` skill (`/opsx:verify flag-stale-applications`) and fix
       anything it reports, so both mechanical gates have run before any review session is spent
-- [ ] 5.4 **Offer** the user an independent `reviewer` pass and **wait for their answer**. This task
+- [x] 5.4 **Offer** the user an independent `reviewer` pass and **wait for their answer**. This task
       is a reminder to ask, not authorization to launch. If they accept, launch it with
       `node .claude/hooks/review.mjs flag-stale-applications` — the launcher, never the Agent tool,
       because an in-process sub-agent inherits this session's permissions and the deny rules that
