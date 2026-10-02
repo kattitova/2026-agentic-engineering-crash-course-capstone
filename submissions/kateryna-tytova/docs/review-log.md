@@ -32,3 +32,5 @@ their verdicts are retrofitted from their findings.
 - [2026-10-01 — edit-and-delete-application (re-review)](reviews/2026-10-01-edit-and-delete-application-re-review.md) — PASS WITH NOTES (0 critical, 0 major, 1 minor carried forward); R20261001-6 fixed
 - [2026-10-02 — show-days-in-status](reviews/2026-10-02-show-days-in-status.md) — PASS WITH NOTES (0 critical, 0 major, 3 minor)
 - [2026-10-02 — flag-stale-applications](reviews/2026-10-02-flag-stale-applications.md) — PASS WITH NOTES (0 critical, 0 major, 1 minor)
+- [2026-10-02 — tighten-link-validation](reviews/2026-10-02-tighten-link-validation.md) — CHANGES REQUESTED (0 critical, 1 major, 1 minor)
+- [2026-10-02 — tighten-link-validation (re-review)](reviews/2026-10-02-tighten-link-validation-re-review.md) — PASS WITH NOTES (0 critical, 0 major, 1 minor carried forward); R20261002-5 fixed

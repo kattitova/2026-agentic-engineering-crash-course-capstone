@@ -33,7 +33,7 @@ overall progress of the job search is visible at a glance.
 | company     | string                                                      | required; at most 120 characters         |
 | position    | string                                                      | required; at most 120 characters         |
 | status      | enum: WISHLIST \| APPLIED \| INTERVIEW \| OFFER \| REJECTED | defaults to WISHLIST                     |
-| link        | string?                                                     | link to the job posting; http(s) only, at most 2048 characters |
+| link        | string?                                                     | link to the job posting; http(s) with a domain host, no credentials, at most 512 characters |
 | notes       | string?                                                     | free text; at most 2000 characters       |
 | appliedDate | DateTime?                                                   | set on the first transition into APPLIED |
 | statusChangedAt | DateTime                                                | defaults to now(); updated only when `status` changes |
@@ -320,3 +320,57 @@ plan, and why. Empty is fine on Day 0.)_
   ratio is computed from. `amber-600`, the obvious warning colour, is 2.86:1 and
   fails outright. The lesson is that "it is a warning, so use the warning colour"
   does not survive contact with a tinted background.
+
+- **2026-10-02 — a link must be an address, and 2048 became 512.** A manual pass
+  found `https://test` stored as a job posting link. The check behind the field
+  was `new URL()` plus a protocol test, and that pair only asks whether a value
+  is syntactically a URL - any non-empty host satisfies it, so `http://a`,
+  `https://.com` and `https://-.com` passed too, and the card rendered them as
+  working links. The host must now be a domain: labels separated by dots, none
+  empty and none starting or ending with a hyphen, under a top-level name of at
+  least two characters. `localhost` and numeric hosts fall to that same rule and
+  are deliberately not exempted - a job posting is not served by the machine
+  running the tracker. A link carrying credentials (`https://user:pass@host`) is
+  refused separately, because its host is a real domain and the card presents a
+  stored link as something to open.
+
+  Two decisions inside that rule are worth recording. An underscore is allowed
+  in a label: the DNS hostname grammar has no place for it, but `URL` keeps it
+  and `careers_eu.example.com` is a real shape, so refusing it would reject an
+  address that resolves. The price is that `_.com` passes - an unregistrable
+  name, so a dead link rather than a misleading one. And the two-character
+  minimum for a top-level name applies only to Latin script: `a.b` is refused,
+  `прикла.д` is accepted. A first attempt closed that gap by the length of the
+  punycode form - a one-character name encodes to three characters after `xn--`,
+  real names to four or more - and an independent review showed the measurement
+  was wrong: it holds only for low code points, so `가`, `컴` and `한` encode to four
+  and the rule would have refused `example.д` while accepting `example.컴`. The
+  exact answer needs a punycode decode, which was prototyped and declined: the
+  root zone has no one-character name in any script, so nothing anyone can paste
+  reaches this case, and fifteen lines of punycode arithmetic in a module the
+  client bundle imports is not worth a hand-typed dead link. The gap is recorded
+  in the capability spec instead of being papered over.
+
+  The lesson is about the measurement, not the rule: six one-character samples
+  all came from ranges that fit the conclusion, and a sweep of the whole range
+  would have shown 105,651 counter-examples. A boundary read off a sample is a
+  guess with a table next to it.
+
+  The maximum dropped from 2048 to 512. The 2026-09-29 entry above took 2048 as
+  the conventional ceiling for a URL, which it is - but it is not a measurement
+  of anything this tracker stores. Measured against real postings, the longest
+  realistic address is around 130 characters (a LinkedIn link copied out of the
+  address bar, with `refId` and `trackingId`); a clean posting path is 45 to 115.
+  512 leaves room for a longer tracking tail at a quarter of the old ceiling.
+  The limit matters more for this field than for the others: a company name cut
+  short is visibly wrong, while a link cut short stores a dead address that looks
+  whole.
+
+  Not changed, deliberately: the field still stops accepting input silently at
+  the maximum, with no counter and no message, and nothing prepends `https://`
+  to a scheme-less value. The normal path is a paste of a complete address;
+  prepending would need normalisation on two levels and would make the maximum
+  measure a value the person never typed. What did change is the refusal message,
+  which now names the shape of a web address with an example rather than only
+  calling the value invalid - the one fault reached by hand is a bare domain, and
+  "invalid" does not say what is missing.

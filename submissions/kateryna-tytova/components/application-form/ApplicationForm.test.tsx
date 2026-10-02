@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { FAILED, type ActionResult } from "@/lib/applications/action-result";
+import { APPLICATION_LIMITS } from "@/lib/applications/validation";
 import { ApplicationForm } from "./ApplicationForm";
 
 // The config deliberately has no `globals: true`, so RTL's automatic cleanup
@@ -50,6 +51,33 @@ describe("ApplicationForm", () => {
     // Counted rather than listed: a fifth field added later has to fail here,
     // which asserting the four by name would not catch.
     expect(screen.getAllByRole("textbox")).toHaveLength(4);
+  });
+
+  // Against the constant, not against literal numbers: what can regress here is
+  // the wiring from APPLICATION_LIMITS to the fields, and the numbers themselves
+  // are pinned in validation.test.ts. Nothing asserted this before - the
+  // attributes could be deleted and the whole suite would stay green, because
+  // fireEvent assigns `value` directly and so never applies maxLength. What the
+  // field does with the limit is a browser behaviour, covered in e2e.
+  it("bounds every field at the limit the validation applies", () => {
+    render(<ApplicationForm action={noop} />);
+
+    expect(screen.getByLabelText(/company/i)).toHaveAttribute(
+      "maxlength",
+      String(APPLICATION_LIMITS.company),
+    );
+    expect(screen.getByLabelText(/position/i)).toHaveAttribute(
+      "maxlength",
+      String(APPLICATION_LIMITS.position),
+    );
+    expect(screen.getByLabelText(/link/i)).toHaveAttribute(
+      "maxlength",
+      String(APPLICATION_LIMITS.link),
+    );
+    expect(screen.getByLabelText(/notes/i)).toHaveAttribute(
+      "maxlength",
+      String(APPLICATION_LIMITS.notes),
+    );
   });
 
   it("marks the company and the position as required, and the rest as not", () => {
@@ -139,7 +167,7 @@ describe("ApplicationForm announcing a refusal", () => {
         action={refusing({
           ok: false,
           error: "Invalid application data",
-          fieldErrors: { position: "Position is required", link: "Link must be a valid http(s) URL" },
+          fieldErrors: { position: "Position is required", link: "Link must be a full web address, like https://example.com/job" },
         })}
       />,
     );
@@ -195,6 +223,32 @@ describe("ApplicationForm opened on an existing application", () => {
     expect(screen.getByLabelText(/position/i)).toHaveValue(STORED.position);
     expect(screen.getByLabelText(/link/i)).toHaveValue(STORED.link);
     expect(screen.getByLabelText(/notes/i)).toHaveValue(STORED.notes);
+  });
+
+  // A row can hold a value over the limit: seed.ts and direct database edits
+  // bypass validateApplicationInput, and maxLength does not cut a value that is
+  // already in the field. So the field shows the whole thing, and the person can
+  // only get out of it by deleting the excess.
+  //
+  // What this test cannot show: that submitting it unchanged is refused. The
+  // action is stubbed here, so a refusal asserted in jsdom would be the stub's
+  // own return value, and the browser blocking an over-long submit on its own is
+  // invisible without a real one. The validator half of that - a company over
+  // the maximum refused with a message naming the field - is covered in
+  // validation.test.ts.
+  it("shows a stored value that is longer than the field's maximum in full", () => {
+    const tooLong = "A".repeat(APPLICATION_LIMITS.company + 80);
+    render(
+      <ApplicationForm
+        action={noop}
+        id="app-1"
+        initialValues={{ ...STORED, company: tooLong }}
+        submitLabel="Save changes"
+        pendingLabel="Saving…"
+      />,
+    );
+
+    expect(screen.getByLabelText(/company/i)).toHaveValue(tooLong);
   });
 
   it("offers the same four fields and no status field", () => {
@@ -291,8 +345,8 @@ describe("ApplicationForm refusing an edit", () => {
       name: "a link that is not a web address",
       field: /link/i,
       value: "javascript:alert(1)",
-      errors: { link: "Link must be a valid http(s) URL" },
-      message: "Link must be a valid http(s) URL",
+      errors: { link: "Link must be a full web address, like https://example.com/job" },
+      message: "Link must be a full web address, like https://example.com/job",
     },
     {
       name: "a company over the maximum",

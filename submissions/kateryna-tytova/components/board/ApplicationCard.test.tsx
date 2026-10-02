@@ -43,6 +43,21 @@ describe("ApplicationCard", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
+  it("offers no link when the stored value is not an address the form would accept", () => {
+    // The card and the form share one rule, so a value the form refuses must
+    // not be presented here as something to open. A bare word is a valid host
+    // to the URL parser, and credentials in front of a real domain are how one
+    // domain is made to look like another.
+    for (const link of ["https://test", "https://user:pass@example.com"]) {
+      const { unmount } = render(
+        <ApplicationCard now={NOW} application={application({ link })} />,
+      );
+
+      expect(screen.queryByRole("link"), link).toBeNull();
+      unmount();
+    }
+  });
+
   it("names the application in the posting link's accessible name", () => {
     // A column of cards otherwise reads as "View posting" over and over in a
     // screen reader's link list, with nothing to tell the entries apart.

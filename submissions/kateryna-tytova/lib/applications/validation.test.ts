@@ -59,9 +59,106 @@ describe("validateApplicationInput", () => {
         validateApplicationInput({ company: "Acme", position: "Dev", link }),
       ).toEqual({
         ok: false,
-        errors: { link: "Link must be a valid http(s) URL" },
+        errors: { link: "Link must be a full web address, like https://example.com/job" },
       });
     }
+  });
+
+  // Parsing as a URL is weaker than being an address: a bare word is a valid
+  // host to the parser, and the card would then offer it as a link to a posting
+  // that cannot be reached.
+  it("rejects a link whose host is not a domain name", () => {
+    const hosts = [
+      "https://test",
+      "http://a",
+      "https://.com",
+      "https://a..b",
+      "https://-.com",
+      "https://example.com.",
+      // A one-character top-level name written in Latin script. The encoded
+      // spelling is a known gap, covered in the accepted cases below.
+      "https://a.b",
+      "https://localhost:3000",
+      "https://127.0.0.1",
+      "https://[::1]",
+    ];
+
+    for (const link of hosts) {
+      const result = validateApplicationInput({ company: "Acme", position: "Dev", link });
+
+      expect(result.ok, link).toBe(false);
+      if (result.ok) continue;
+      // Which message it is belongs to the message test; here it only has to
+      // be the link field's.
+      expect(result.errors.link, link).toMatch(/link/i);
+    }
+  });
+
+  // Guards rather than a red step: every one of these passes today, and the
+  // point is that they still pass once the host rule lands. Without them an
+  // over-strict rule would go green on the refusal cases alone.
+  it("keeps accepting an ordinary posting address", () => {
+    const links = [
+      "https://example.com/jobs/1",
+      "http://example.com",
+      "https://jobs.example.co.uk/1",
+      // Copied out of an address bar, tracking parameters and all.
+      "https://www.linkedin.com/jobs/view/3912345678/?refId=aBcDeF%3D%3D&trackingId=XyZ%2BaBc%3D",
+      // An underscore is not in the DNS hostname grammar, but URL keeps it in
+      // the host and a careers site can be named this way.
+      "https://careers_eu.example.com",
+      // A real internationalised domain, under a top-level name of more than
+      // one character.
+      "https://приклад.укр",
+      // Accepted deliberately, and recorded here so the gap is visible rather
+      // than discovered: the root zone has no one-character name in any script,
+      // but telling `.д` from a real one means decoding the punycode label.
+      // The length of the encoded form cannot stand in for that - a
+      // one-character name encodes to three characters in Cyrillic and to four
+      // in Hangul, so a length rule would refuse `д` and accept `컴`. Nothing
+      // anyone can paste reaches this case.
+      "https://прикла.д",
+    ];
+
+    for (const link of links) {
+      const result = validateApplicationInput({ company: "Acme", position: "Dev", link });
+
+      expect(result.ok, link).toBe(true);
+    }
+  });
+
+  // The host here is a perfectly good domain, so the host rule above does not
+  // cover this one. It is refused because the card presents a stored link as
+  // something to open, and credentials in front of the host are how one domain
+  // is made to look like another.
+  it("rejects a link that carries credentials", () => {
+    const result = validateApplicationInput({
+      company: "Acme",
+      position: "Dev",
+      link: "https://user:pass@example.com",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.link).toMatch(/link/i);
+  });
+
+  // The one fault a person reaches by hand is a bare domain, and "invalid" does
+  // not tell them what is missing. One message covers every cause, so it has to
+  // describe the target shape rather than the fault: the field, what a web
+  // address is, and an example to copy.
+  it("says what a link should look like", () => {
+    const result = validateApplicationInput({
+      company: "Acme",
+      position: "Dev",
+      link: "example.com",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.link).toMatch(/link/i);
+    expect(result.errors.link).toMatch(/address/i);
+    expect(result.errors.link).toContain("https://example.com");
   });
 
   it("rejects non-string values", () => {
@@ -71,8 +168,9 @@ describe("validateApplicationInput", () => {
 });
 
 describe("validateApplicationInput length limits", () => {
-  // A link has to stay a valid http(s) URL while it grows, or the length case
-  // would be indistinguishable from the URL case.
+  // A link has to stay an acceptable link while it grows, or the length case
+  // would be indistinguishable from the link-shape case. `example.com` is a
+  // domain under the host rule at any length, so this needs nothing more.
   const linkOfLength = (length: number) =>
     `https://example.com/${"a".repeat(length - "https://example.com/".length)}`;
 
@@ -93,6 +191,19 @@ describe("validateApplicationInput length limits", () => {
     if (result.ok) return;
     expect(result.errors[field]).toMatch(new RegExp(`${field}`, "i"));
     expect(result.errors[field]).toContain(String(limit));
+  });
+
+  // The numbers themselves. Every case below reads the constant, so without
+  // this nothing would notice a limit being widened - and 512 for the link is a
+  // measurement worth pinning: the longest real posting address found was about
+  // 130 characters, a LinkedIn link with its tracking parameters.
+  it("bounds each field at its agreed maximum", () => {
+    expect(APPLICATION_LIMITS).toEqual({
+      company: 120,
+      position: 120,
+      link: 512,
+      notes: 2000,
+    });
   });
 
   it("measures the trimmed value, not the raw one", () => {
