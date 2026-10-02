@@ -55,6 +55,24 @@ export function resetBoard(): void {
   }
 }
 
+/**
+ * A `DateTime` in the form Prisma 7 stores it in SQLite: ISO text with an
+ * explicit offset, not epoch milliseconds.
+ *
+ * A spec that inserts its own row has to match this. Writing a number happens
+ * to work — Prisma coerces it on the way out — but it makes the test exercise a
+ * row shape the application never produces, and it makes the value unusable to
+ * any assertion that compares instants.
+ */
+export function storedInstant(ms: number): string {
+  return `${new Date(ms).toISOString().replace("Z", "+00:00")}`;
+}
+
+/** The inverse, for an assertion that needs to compare two stored instants. */
+export function parseStoredInstant(value: string | number): number {
+  return typeof value === "number" ? value : Date.parse(value);
+}
+
 /** Opens the shared e2e database for a test that needs to assert on rows. */
 export function withDatabase<T>(query: (db: Database.Database) => T): T {
   const db = new Database(E2E_DB);

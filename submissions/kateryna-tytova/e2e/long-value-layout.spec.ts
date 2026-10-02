@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { resetBoard, withDatabase } from "./reset-board";
+import { resetBoard, storedInstant, withDatabase } from "./reset-board";
 
 const COLUMNS = ["Wishlist", "Applied", "Interview", "Offer", "Rejected"] as const;
 
@@ -74,9 +74,72 @@ function insertLongValueApplication(): void {
       `INSERT INTO JobApplication
          (id, company, position, status, link, notes, appliedDate, statusChangedAt, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
-    ).run("e2e-long-value", LONG, LONG, "WISHLIST", now, now, now);
+    ).run(
+      "e2e-long-value",
+      LONG,
+      LONG,
+      "WISHLIST",
+      storedInstant(now),
+      storedInstant(now),
+      storedInstant(now),
+    );
   });
 }
+
+/**
+ * A card whose badge is as wide as the badge can get.
+ *
+ * Its own row rather than folded into the long-value one: that card sets
+ * `statusChangedAt` to now, so its badge reads "Today" - the shortest value
+ * there is - and proves nothing about a wide one. And a single card carrying
+ * both a 200-character name and a four-digit badge would be one measurement
+ * with two possible causes, which could not say which of them moved a column.
+ * The same reason this spec keeps a separate control test.
+ */
+function insertLargeBadgeApplication(): void {
+  withDatabase((db) => {
+    const now = Date.now();
+    const ancient = now - 5000 * 24 * 60 * 60 * 1000;
+    db.prepare(
+      `INSERT INTO JobApplication
+         (id, company, position, status, link, notes, appliedDate, statusChangedAt, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?)`,
+    ).run(
+      "e2e-large-badge",
+      "Initrode",
+      "Analyst",
+      "OFFER",
+      storedInstant(ancient),
+      storedInstant(ancient),
+      storedInstant(now),
+    );
+  });
+}
+
+test("a four-digit day count does not change any column's width", async ({ page }) => {
+  await page.goto("/");
+  const before = await columnWidths(page);
+  expect(await scrollsHorizontally(page)).toBe(false);
+
+  insertLargeBadgeApplication();
+  await page.reload();
+
+  // The card is really there with the wide badge, so the measurement is of a
+  // board that holds it rather than of one that dropped the row.
+  const offer = page.getByRole("region", { name: "Offer" });
+  await expect(offer.getByText("5000d")).toBeVisible();
+  await expect(offer.getByText("5000 days in Offer")).toBeAttached();
+
+  const after = await columnWidths(page);
+  for (const [index, width] of after.entries()) {
+    expect(
+      Math.abs(width - (before[index] ?? 0)),
+      `column ${COLUMNS[index]} changed width`,
+    ).toBeLessThanOrEqual(TOLERANCE);
+  }
+
+  expect(await scrollsHorizontally(page)).toBe(false);
+});
 
 test("a long unbroken value does not change any column's width", async ({ page }) => {
   await page.goto("/");

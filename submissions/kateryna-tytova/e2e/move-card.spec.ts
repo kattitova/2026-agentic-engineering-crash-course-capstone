@@ -1,17 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { moveRightWithKeyboard } from "./keyboard-move";
 import { resetBoard, withDatabase } from "./reset-board";
-
-/**
- * Waits until the board can actually be driven.
- *
- * dnd-kit renders its live region into the body only on the client, so it is
- * absent from the server HTML and appearing is exactly "React has hydrated and
- * the sensors are listening". Without this the first test presses keys against
- * markup that is still inert, and the drag never starts.
- */
-async function waitForBoardReady(page: Page): Promise<void> {
-  await page.locator("[id^=DndLiveRegion]").waitFor({ state: "attached" });
-}
 
 function column(page: Page, name: string) {
   return page.getByRole("region", { name });
@@ -19,44 +8,6 @@ function column(page: Page, name: string) {
 
 async function cardCount(page: Page, name: string): Promise<number> {
   return column(page, name).locator("article").count();
-}
-
-/**
- * Moves the focused card one column to the right with the keyboard alone.
- *
- * Each step waits for dnd-kit to announce it rather than for a fixed delay.
- * Pressing the three keys back to back races the sensor and the drag silently
- * never starts; the announcements are the sensor telling us it is ready for the
- * next one, so they are both the synchronisation and the assertion that the
- * keyboard path really went through pick up -> choose column -> drop.
- */
-async function moveRightWithKeyboard(
-  page: Page,
-  company: string,
-  targetStatus: string,
-): Promise<void> {
-  await waitForBoardReady(page);
-  const announcements = page.locator("[id^=DndLiveRegion]");
-
-  await page.getByRole("button", { name: `Move ${company}` }).focus();
-  await page.keyboard.press("Space");
-  await expect(announcements).toContainText(/moved over droppable area/i);
-
-  // dnd-kit attaches its keydown listener inside a setTimeout
-  // (@dnd-kit/core/dist/core.cjs.development.js:1163), so for one macrotask the
-  // drag is already active - announced, aria-pressed - while no listener exists
-  // and an arrow key is silently dropped. Observed as a 3-in-15 flake in which
-  // the coordinate getter was never called at all. Yielding one macrotask here
-  // is ordered after theirs, because theirs was queued first.
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
-
-  await page.keyboard.press("ArrowRight");
-  await expect(announcements).toContainText(
-    new RegExp(`moved over droppable area ${targetStatus}`, "i"),
-  );
-
-  await page.keyboard.press("Space");
-  await expect(announcements).toContainText(/was dropped over/i);
 }
 
 test.beforeEach(() => {

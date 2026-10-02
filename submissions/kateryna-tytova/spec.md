@@ -241,3 +241,35 @@ plan, and why. Empty is fine on Day 0.)_
   control disabled while writing — described a mechanism that would have been a
   state the application cannot produce, with two tests asserting it. Raised by
   the same review pass as `R20261001-7`.
+
+- **2026-10-02 — "N days in this status" counts whole elapsed days, computed
+  server-side (MVP item 5).** `floor((now − statusChangedAt) / 24h)`, clamped at
+  zero, from one instant taken in `app/page.tsx` per request. Calendar days were
+  the alternative and were rejected: they need a timezone, and the one the board
+  renders in is not guaranteed to be the viewer's, so the number could be wrong
+  by one for a reason the person cannot see. Elapsed days cannot be, and they
+  make MVP item 6's rule exactly what this file already writes — `statusChangedAt`
+  older than 14 days — with no second notion of a day to reconcile. The cost is
+  that a status changed yesterday evening reads as under a day old this morning;
+  that is paid in wording ("Today", not "0 days"), not in the arithmetic.
+
+  The instant is a prop, required with no default at every level down to the
+  card, because `ApplicationCard` is in the client bundle and renders twice —
+  once on the server for the HTML, once on hydration. A card reaching for its own
+  clock would produce two different numbers and mismatch; a `now = new Date()`
+  default would have type-checked, kept every existing test green, and hidden
+  exactly that. Making it required turned all 21 missed call sites into compile
+  errors instead.
+
+  `daysInStatus` and `describeDaysInStatus` live in `lib/applications/status-age.ts`
+  as pure functions of their arguments, so MVP item 6 thresholds the same number
+  rather than re-deriving it.
+
+- **2026-10-02 — the optimistic move resets the badge as well as the column.**
+  `applyChange`'s `move` branch stamps the served instant onto `statusChangedAt`
+  alongside `status`. This is not a guess about the server: `planStatusChange`
+  provably resets that field on any real status change, so a card showing its old
+  count in a new column would be stating the one thing the board knows to be
+  wrong. A failed move needs no handling of its own — the optimistic change is
+  dropped and the server list, carrying the original moment, wins, which is the
+  same mechanism that already returns the card to its column.
