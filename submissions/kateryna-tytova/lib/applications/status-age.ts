@@ -1,3 +1,5 @@
+import { ApplicationStatus } from "@/app/generated/prisma/enums";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -60,4 +62,44 @@ export function describeDaysInStatus(days: number, statusLabel: string): DaysInS
     short: `${days}d`,
     full: `${days} ${days === 1 ? "day" : "days"} in ${statusLabel}`,
   };
+}
+
+/**
+ * How long an application may sit in Applied before the board flags it.
+ *
+ * Inclusive: 14 whole days counts. `spec.md` words MVP item 6 twice - "more
+ * than 14 days" and "statusChangedAt older than 14 days" - and those readings
+ * differ by a day. The deciding argument is the display rather than the English:
+ * the card already shows "14d", and not flagging it while a card reading "15d"
+ * is flagged looks arbitrary, with nothing on the card to explain why. It also
+ * matches what the floored count means, since `daysInStatus` returning 14 covers
+ * everything from exactly 14 days to just under 15.
+ */
+export const STALE_AFTER_DAYS = 14;
+
+/**
+ * Whether an application has gone quiet: in Applied, and there for long enough.
+ *
+ * Both halves are required. Applied is the one stage where silence carries
+ * information - the application went out and nothing came back. A Wishlist card
+ * is a bookmark and a Rejected one is finished, however old either is.
+ *
+ * Takes the two fields the rule is defined on rather than a whole
+ * JobApplication, so it is callable from a test without building a row, and so
+ * it is honest about what it reads.
+ *
+ * `now` is an argument for the same reason `daysInStatus` takes one: the card
+ * that renders this is in the client bundle, so it renders on the server and
+ * again on hydration, and a clock in here would make the flag flicker.
+ */
+export function hasNoMovement(
+  application: { status: ApplicationStatus; statusChangedAt: Date },
+  now: Date,
+): boolean {
+  if (application.status !== ApplicationStatus.APPLIED) {
+    return false;
+  }
+  // Calls the count rather than subtracting dates again, so the flag and the
+  // badge beside it can never disagree about how old a card is.
+  return daysInStatus(application.statusChangedAt, now) >= STALE_AFTER_DAYS;
 }

@@ -324,3 +324,101 @@ describe("ApplicationCard's days-in-status badge", () => {
     expect(screen.getAllByText(/days in /)).toHaveLength(1);
   });
 });
+
+describe("ApplicationCard's no-movement flag", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  /** `now`, with the card's statusChangedAt a controlled distance behind it. */
+  const servedAfter = (days: number) => new Date(TIMESTAMP.getTime() + days * DAY);
+
+  const flag = () => screen.queryByText("No movement");
+  const announced = () => screen.queryByText("No movement for 14 days or more");
+
+  it("flags an application that has sat in Applied well past the threshold", () => {
+    render(
+      <ApplicationCard application={application({ status: "APPLIED" })} now={servedAfter(30)} />,
+    );
+
+    // Both forms: an empty amber pill carrying only the .sr-only sentence would
+    // satisfy an assertion on the announced form alone, and the requirement is
+    // that the flag survives having its colours taken away.
+    expect(flag()).toBeInTheDocument();
+    expect(announced()).toBeInTheDocument();
+  });
+
+  it("flags one at exactly the threshold", () => {
+    render(
+      <ApplicationCard application={application({ status: "APPLIED" })} now={servedAfter(14)} />,
+    );
+
+    expect(flag()).toBeInTheDocument();
+  });
+
+  it("does not flag one a day short of the threshold", () => {
+    render(
+      <ApplicationCard application={application({ status: "APPLIED" })} now={servedAfter(13)} />,
+    );
+
+    expect(flag()).toBeNull();
+  });
+
+  it("does not flag one that has just arrived in Applied", () => {
+    render(
+      <ApplicationCard application={application({ status: "APPLIED" })} now={servedAfter(0)} />,
+    );
+
+    expect(flag()).toBeNull();
+  });
+
+  it.each(["WISHLIST", "INTERVIEW", "OFFER", "REJECTED"] as const)(
+    "does not flag an old application in %s",
+    (status) => {
+      render(
+        <ApplicationCard application={application({ status })} now={servedAfter(200)} />,
+      );
+
+      expect(flag()).toBeNull();
+    },
+  );
+
+  it("announces nothing about movement on an unflagged card", () => {
+    render(
+      <ApplicationCard application={application({ status: "WISHLIST" })} now={servedAfter(200)} />,
+    );
+
+    expect(announced()).toBeNull();
+    expect(screen.queryByText(/movement/i)).toBeNull();
+  });
+
+  it("still shows the day count, worded and styled the same as on an unflagged card", () => {
+    // The count answers how long, the flag answers whether that is a problem.
+    // Restyling the count into the flag would make one element answer both.
+    const { unmount } = render(
+      <ApplicationCard application={application({ status: "APPLIED" })} now={servedAfter(30)} />,
+    );
+    const flagged = screen.getByText("30d");
+    const flaggedClass = flagged.parentElement?.className;
+    expect(screen.getByText("30 days in Applied")).toBeInTheDocument();
+    unmount();
+
+    render(
+      <ApplicationCard application={application({ status: "WISHLIST" })} now={servedAfter(30)} />,
+    );
+    const unflagged = screen.getByText("30d");
+
+    expect(unflagged.textContent).toBe(flagged.textContent);
+    expect(unflagged.parentElement?.className).toBe(flaggedClass);
+  });
+
+  it("puts the flag beside the count, in the same row", () => {
+    render(
+      <ApplicationCard application={application({ status: "APPLIED" })} now={servedAfter(30)} />,
+    );
+
+    const row = screen.getByText("30d").closest("p");
+    expect(row).not.toBeNull();
+    expect(row).toContainElement(flag());
+    // The row wraps, so two non-shrinking pills drop to a second line rather
+    // than overflowing the card.
+    expect(row?.className).toContain("flex-wrap");
+  });
+});

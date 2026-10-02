@@ -2,7 +2,12 @@ import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/
 import type { Ref } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { BOARD_COLUMNS } from "@/lib/applications/board";
-import { daysInStatus, describeDaysInStatus } from "@/lib/applications/status-age";
+import {
+  daysInStatus,
+  describeDaysInStatus,
+  hasNoMovement,
+  STALE_AFTER_DAYS,
+} from "@/lib/applications/status-age";
 import { isHttpUrl } from "@/lib/applications/validation";
 
 // An outline, not a background tint alone: these controls are icon-only, and a
@@ -92,6 +97,7 @@ export function ApplicationCard({
     daysInStatus(application.statusChangedAt, now),
     statusLabel(application.status),
   );
+  const noMovement = hasNoMovement(application, now);
 
   return (
     // Named, so card-by-card navigation says which application it lands on
@@ -179,8 +185,14 @@ export function ApplicationCard({
       {/* Its own row, not the header: that row is already three controls beside a
           heading that is the only flexible item in it, and the heading's clamp is
           what the layout test measures. shrink-0 and tabular-nums so a four-digit
-          count cannot reflow the row it sits in. */}
-      <p className="mt-2 flex">
+          count cannot reflow the row it sits in.
+
+          flex-wrap because the row holds two non-shrinking pills once a card is
+          flagged. Without it they overflow instead of dropping to a second line -
+          the same mechanism that overflowed the heading before its clamp. The
+          card grows taller, which the column absorbs; what must not change is
+          any column's width. */}
+      <p className="mt-2 flex flex-wrap gap-1.5">
         {/* slate-600, not the slate-500 BoardColumn's count uses. That badge sits
             on bg-white and clears AA at 4.76:1; the same colour on this bg-slate-100
             is 4.34:1, under the 4.5:1 minimum for 12px text. slate-600 is 6.92:1,
@@ -194,6 +206,28 @@ export function ApplicationCard({
           <span aria-hidden="true">{age.short}</span>
           <span className="sr-only">{age.full}</span>
         </span>
+
+        {/* Visible text, not colour alone: colour as the only carrier of meaning
+            fails WCAG 1.4.1, so a reader who cannot tell amber from slate would
+            have nothing to go on. The tint reinforces the word; it does not
+            replace it.
+
+            amber-800 on amber-100 is 6.37:1, computed against the tint the text
+            actually sits on, as the 2026-10-02 spec.md entry asks. amber-700 was
+            the first choice and is 4.51:1 - it clears the 4.5:1 minimum for 12px
+            text by 0.01, which is no margin at all for Tailwind 4's oklch values
+            not being the sRGB hexes these numbers come from. amber-600, the
+            obvious warning colour, is 2.86:1 and fails outright. */}
+        {noMovement ? (
+          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            <span aria-hidden="true">No movement</span>
+            {/* Does not end in " in <Status>": e2e/days-in-status.spec.ts counts
+                day badges by that shape, and a sentence ending that way would be
+                counted as a second one. Ends on the threshold instead, which also
+                says the rule out loud. */}
+            <span className="sr-only">{`No movement for ${STALE_AFTER_DAYS} days or more`}</span>
+          </span>
+        ) : null}
       </p>
       {postingUrl !== null ? (
         <a

@@ -439,3 +439,57 @@ describe("Board counting every card against one instant", () => {
     expect(screen.queryByText("12 days in Interview")).toBeNull();
   });
 });
+
+describe("Board flagging applications that have gone quiet", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const SERVED = new Date(TIMESTAMP.getTime() + 30 * DAY);
+
+  it("flags the Applied cards and not the Interview one", () => {
+    render(<Board applications={CARDS} now={SERVED} />);
+
+    // CARDS holds two in Applied and one in Interview, all 30 days behind.
+    expect(screen.getAllByText("No movement")).toHaveLength(2);
+    const interview = screen.getByText("Initech").closest("article");
+    expect(interview).not.toContainElement(screen.getAllByText("No movement")[0] ?? null);
+  });
+
+  it("stops flagging a card once it is in another column", () => {
+    // The status half of the rule. A move changes both fields the rule reads, so
+    // the server list arriving with the new status is the state the board settles
+    // into whichever way the move was made.
+    const { rerender } = render(<Board applications={CARDS} now={SERVED} />);
+    expect(screen.getAllByText("No movement")).toHaveLength(2);
+
+    rerender(
+      <Board
+        applications={[
+          { ...(CARDS[0] as JobApplication), status: ApplicationStatus.INTERVIEW },
+          CARDS[1] as JobApplication,
+          CARDS[2] as JobApplication,
+        ]}
+        now={SERVED}
+      />,
+    );
+
+    expect(screen.getAllByText("No movement")).toHaveLength(1);
+    const moved = screen.getByText("Acme Cloud").closest("article");
+    expect(moved?.textContent).not.toContain("No movement");
+  });
+
+  it("does not flag a card that has just moved into Applied", () => {
+    // The age half. A move resets statusChangedAt, so time in Applied starts at
+    // the move however long the card sat in Wishlist first.
+    render(
+      <Board
+        applications={[
+          { ...(CARDS[0] as JobApplication), statusChangedAt: SERVED },
+          { ...(CARDS[1] as JobApplication), statusChangedAt: SERVED },
+          { ...(CARDS[2] as JobApplication), statusChangedAt: SERVED },
+        ]}
+        now={SERVED}
+      />,
+    );
+
+    expect(screen.queryByText("No movement")).toBeNull();
+  });
+});

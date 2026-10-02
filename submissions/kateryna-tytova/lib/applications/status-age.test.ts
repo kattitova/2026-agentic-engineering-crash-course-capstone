@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysInStatus, describeDaysInStatus } from "./status-age";
+import { daysInStatus, describeDaysInStatus, hasNoMovement } from "./status-age";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -94,5 +94,54 @@ describe("describeDaysInStatus", () => {
       short: "5000d",
       full: "5000 days in Offer",
     });
+  });
+});
+
+describe("hasNoMovement", () => {
+  /** The two fields the rule is defined on, and nothing else. */
+  const inStatus = (status: string, daysAgo: number) => ({
+    status: status as never,
+    statusChangedAt: ago(daysAgo * DAY),
+  });
+
+  it("flags an application that has sat in Applied well past the threshold", () => {
+    expect(hasNoMovement(inStatus("APPLIED", 30), NOW)).toBe(true);
+  });
+
+  it("flags one at exactly the threshold", () => {
+    // The inclusive edge, argued from what the card shows: it reads "14d", and
+    // not flagging it while a card reading "15d" is flagged would look arbitrary
+    // with nothing on the card to explain the difference.
+    expect(hasNoMovement(inStatus("APPLIED", 14), NOW)).toBe(true);
+  });
+
+  it("does not flag one a day short of the threshold", () => {
+    expect(hasNoMovement(inStatus("APPLIED", 13), NOW)).toBe(false);
+  });
+
+  it("does not flag one that has just arrived in Applied", () => {
+    expect(hasNoMovement(inStatus("APPLIED", 0), NOW)).toBe(false);
+  });
+
+  it.each(["WISHLIST", "INTERVIEW", "OFFER", "REJECTED"])(
+    "does not flag an old application in %s",
+    (status) => {
+      // The half of the rule most easily lost. Applied is the one stage where
+      // silence carries information - the application went out and nothing came
+      // back. A Wishlist card is a bookmark and a Rejected one is finished,
+      // however old either is.
+      expect(hasNoMovement(inStatus(status, 200), NOW)).toBe(false);
+    },
+  );
+
+  it("reads its `now` argument rather than calling a clock of its own", () => {
+    // Every case above shares one NOW, so a predicate that ignored `now` and
+    // used Date.now() internally would pass all of them.
+    const application = inStatus("APPLIED", 0);
+    const beforeThreshold = new Date(application.statusChangedAt.getTime() + 13 * DAY);
+    const afterThreshold = new Date(application.statusChangedAt.getTime() + 14 * DAY);
+
+    expect(hasNoMovement(application, beforeThreshold)).toBe(false);
+    expect(hasNoMovement(application, afterThreshold)).toBe(true);
   });
 });

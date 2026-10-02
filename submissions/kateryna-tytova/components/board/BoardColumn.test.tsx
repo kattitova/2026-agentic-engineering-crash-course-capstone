@@ -210,3 +210,45 @@ describe("BoardColumn passing the served instant down", () => {
     expect(screen.getByText("2 days in Applied")).toBeInTheDocument();
   });
 });
+
+describe("BoardColumn flagging only the cards that have gone quiet", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("flags exactly one of a stale and a fresh Applied card", () => {
+    // The rule is per card, not per column: a column holding both must flag one.
+    const cards = [
+      application("a", { company: "Acme Cloud", statusChangedAt: TIMESTAMP }),
+      application("b", {
+        company: "Globex",
+        statusChangedAt: new Date(TIMESTAMP.getTime() + 25 * DAY),
+      }),
+    ];
+
+    render(
+      <BoardColumn
+        column={APPLIED_COLUMN}
+        applications={cards}
+        now={new Date(TIMESTAMP.getTime() + 30 * DAY)}
+      />,
+    );
+
+    expect(screen.getAllByText("No movement")).toHaveLength(1);
+    // And it is the older one: 30 days versus 5.
+    const stale = screen.getByText("30 days in Applied").closest("article");
+    expect(stale).toContainElement(screen.getByText("No movement"));
+  });
+
+  it("flags none of them when the column is not Applied", () => {
+    const cards = [application("a"), application("b")];
+
+    render(
+      <BoardColumn
+        column={BOARD_COLUMNS[0] as typeof APPLIED_COLUMN}
+        applications={cards.map((card) => ({ ...card, status: "WISHLIST" as const }))}
+        now={new Date(TIMESTAMP.getTime() + 200 * DAY)}
+      />,
+    );
+
+    expect(screen.queryByText("No movement")).toBeNull();
+  });
+});
