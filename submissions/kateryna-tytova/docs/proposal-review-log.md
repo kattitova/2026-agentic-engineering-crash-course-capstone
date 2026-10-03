@@ -22,3 +22,4 @@ distinct from the code reviewer's `R` ids because the shared disposition ledger
 - [2026-10-02 — flag-stale-applications](proposal-reviews/2026-10-02-flag-stale-applications.md) — REVISE PROPOSAL (0 critical, 1 major, 4 minor)
 - [2026-10-02 — tighten-link-validation](proposal-reviews/2026-10-02-tighten-link-validation.md) — REVISE PROPOSAL (0 critical, 2 major, 7 minor)
 - [2026-10-02 — show-board-stats](proposal-reviews/2026-10-02-show-board-stats.md) — REVISE PROPOSAL (0 critical, 1 major, 4 minor)
+- [2026-10-02 — move-card-by-menu](proposal-reviews/2026-10-02-move-card-by-menu.md) — REVISE PROPOSAL (0 critical, 2 major, 4 minor)
