@@ -64,5 +64,10 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 
+# Where Vitest writes a report when asked for `--reporter=json`. Nothing in the
+# config produces one, so a copy here is debris, and it records whatever the suite
+# happened to say that run - a committed one once read "4 failed".
+/.vitest/
+
 # A stale archive claim blocks `openspec archive` for everyone who clones.
 .openspec-archive.lock
