@@ -15,6 +15,7 @@ interface BoardColumnProps {
   onFocusRestored?: () => void;
   onEdit?: (application: JobApplication) => void;
   onDelete?: (application: JobApplication) => void;
+  onMove?: (application: JobApplication) => void;
   /** The instant the board was served. Required, so no card can default to a clock. */
   now: Date;
   draggable?: boolean;
@@ -28,6 +29,7 @@ export function BoardColumn({
   onFocusRestored,
   onEdit,
   onDelete,
+  onMove,
   now,
   draggable = false,
 }: BoardColumnProps) {
@@ -78,6 +80,7 @@ export function BoardColumn({
               onFocusRestored={onFocusRestored}
               onEdit={onEdit}
               onDelete={onDelete}
+              onMove={onMove}
               now={now}
             />
           ) : (

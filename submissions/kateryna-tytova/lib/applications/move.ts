@@ -1,5 +1,5 @@
 import type { ApplicationStatus } from "@/app/generated/prisma/enums";
-import { BOARD_COLUMNS } from "./board";
+import { BOARD_COLUMNS, type BoardColumn } from "./board";
 import { isApplicationStatus } from "./status";
 
 export interface CardMove {
@@ -31,6 +31,20 @@ export function planCardMove(
     return null;
   }
   return { cardId, from, to };
+}
+
+/**
+ * The columns a card can be moved to by choosing one: every column but the one
+ * it is already in, in funnel order.
+ *
+ * The current column is left out rather than offered and ignored. A move to it
+ * plans no move, so offering it would invite a choice that does nothing.
+ *
+ * Derived from BOARD_COLUMNS so the five statuses and their order stay in one
+ * place.
+ */
+export function movableColumns(from: ApplicationStatus): readonly BoardColumn[] {
+  return BOARD_COLUMNS.filter((column) => column.status !== from);
 }
 
 /** -1 moves towards Wishlist, 1 towards Rejected. */

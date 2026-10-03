@@ -5,6 +5,7 @@ import {
   adjacentColumn,
   columnAtPoint,
   keyboardStep,
+  movableColumns,
   planCardMove,
   type ColumnRect,
 } from "./move";
@@ -140,5 +141,41 @@ describe("keyboardStep", () => {
   it("returns null when the target column was never measured", () => {
     const withoutOffer = TWO_ROWS.filter((c) => c.status !== ApplicationStatus.OFFER);
     expect(keyboardStep(withoutOffer, ApplicationStatus.INTERVIEW, 1)).toBeNull();
+  });
+});
+
+describe("movableColumns", () => {
+  const ALL = Object.values(ApplicationStatus);
+
+  it("offers the four columns a card is not in, in funnel order", () => {
+    expect(movableColumns(ApplicationStatus.APPLIED).map((c) => c.status)).toEqual([
+      ApplicationStatus.WISHLIST,
+      ApplicationStatus.INTERVIEW,
+      ApplicationStatus.OFFER,
+      ApplicationStatus.REJECTED,
+    ]);
+  });
+
+  it("never offers the column the card is already in", () => {
+    // A move to the current column plans no move, so offering it would invite a
+    // choice that does nothing.
+    for (const status of ALL) {
+      expect(movableColumns(status).map((c) => c.status)).not.toContain(status);
+    }
+  });
+
+  it("offers four columns whichever status the card holds", () => {
+    for (const status of ALL) {
+      expect(movableColumns(status)).toHaveLength(4);
+    }
+  });
+
+  it("keeps the order of the board rather than the enum's declaration order", () => {
+    const funnel = BOARD_COLUMNS.map((c) => c.status);
+    for (const status of ALL) {
+      expect(movableColumns(status).map((c) => c.status)).toEqual(
+        funnel.filter((s) => s !== status),
+      );
+    }
   });
 });

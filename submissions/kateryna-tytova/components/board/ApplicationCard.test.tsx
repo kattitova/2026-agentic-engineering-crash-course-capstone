@@ -437,3 +437,76 @@ describe("ApplicationCard's no-movement flag", () => {
     expect(row?.className).toContain("flex-wrap");
   });
 });
+
+describe("ApplicationCard's move control", () => {
+  it("calls back with its own application when it is clicked", () => {
+    const onMove = vi.fn();
+    const card = application({ id: "b", company: "Globex" });
+    render(<ApplicationCard now={NOW} application={card} onMove={onMove} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Move Globex" }));
+
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledWith(card);
+  });
+
+  it("is not an edit or a deletion", () => {
+    // The three controls sit side by side, and only this one answers to more than
+    // one gesture. Which control was reached must not depend on the gesture.
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <ApplicationCard
+        now={NOW}
+        application={application()}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onMove={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Move Acme Cloud" }));
+
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("is focused before the callback runs", () => {
+    // A click does not focus a button in WebKit, which is the engine on the device
+    // the chooser exists for. The chooser's dialog gives focus back to whatever
+    // held it when it opened, so without this it would hand it back to the body.
+    let focusedWhenCalled: Element | null = null;
+    const onMove = vi.fn(() => {
+      focusedWhenCalled = document.activeElement;
+    });
+    render(<ApplicationCard now={NOW} application={application()} onMove={onMove} />);
+
+    const handle = screen.getByRole("button", { name: "Move Acme Cloud" });
+    fireEvent.click(handle);
+
+    expect(focusedWhenCalled).toBe(handle);
+  });
+
+  it("keeps its name, which the keyboard specs select it by", () => {
+    render(<ApplicationCard now={NOW} application={application()} onMove={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Move Acme Cloud" })).toBeInTheDocument();
+  });
+
+  it("calls nothing back while that card's write is outstanding", () => {
+    const onMove = vi.fn();
+    render(<ApplicationCard now={NOW} application={application()} isCardBusy onMove={onMove} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Move Acme Cloud" }));
+
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when clicked on a card rendered without a chooser", () => {
+    render(<ApplicationCard now={NOW} application={application()} />);
+
+    expect(() =>
+      fireEvent.click(screen.getByRole("button", { name: "Move Acme Cloud" })),
+    ).not.toThrow();
+  });
+});

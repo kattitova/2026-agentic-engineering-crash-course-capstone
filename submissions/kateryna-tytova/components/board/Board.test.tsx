@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
@@ -649,5 +649,272 @@ describe("Board summarising the whole board above it", () => {
 
     expect(summary()).toContain("4 applications");
     expect(summary()).toContain("25% reached interview");
+  });
+});
+
+/**
+ * Writes a test left pending, settled after it.
+ *
+ * React runs every async transition in flight as one batch: an optimistic change
+ * is dropped only once ALL of them have settled. A write that never settles
+ * therefore outlives its test and holds back every later test's rollback - which
+ * showed up as two tests that pass alone and time out in the full file.
+ */
+const unsettledMoves: (() => void)[] = [];
+
+afterEach(async () => {
+  await act(async () => {
+    for (const settle of unsettledMoves.splice(0)) {
+      settle();
+    }
+  });
+});
+
+/** Lets a test decide when - and how - each pending status write settles. */
+function deferMove() {
+  const settlers: ((result: ActionResult<unknown>) => void)[] = [];
+  updateApplicationStatus.mockImplementation(
+    () =>
+      new Promise<ActionResult<unknown>>((resolve) => {
+        settlers.push(resolve);
+        unsettledMoves.push(() => resolve({ ok: true, data: {} }));
+      }),
+  );
+  return settlers;
+}
+
+const column = (name: string) => within(screen.getByRole("region", { name }));
+
+/** Opens the chooser for a card, the way a click on its handle does. */
+function openChooser(company: string) {
+  fireEvent.click(screen.getByRole("button", { name: `Move ${company}` }));
+}
+
+async function chooseColumn(name: string) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }));
+  });
+}
+
+describe("Board opening the chooser for a card", () => {
+  it("opens it for the card whose handle was clicked, not the first", () => {
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Globex");
+
+    expect(screen.getByRole("heading", { name: "Move Globex to…" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Move Acme Cloud to…" })).toBeNull();
+  });
+
+  it("moves nothing by being opened", () => {
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+
+    expect(updateApplicationStatus).not.toHaveBeenCalled();
+    expect(column("Applied").getByText("Acme Cloud")).toBeInTheDocument();
+  });
+
+  it("moves nothing, and shows no message, when it is dismissed", () => {
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(updateApplicationStatus).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "Move Acme Cloud to…" })).toBeNull();
+    expect(screen.getByRole("alert")).toBeEmptyDOMElement();
+  });
+
+  it("does not open the edit form or the delete confirmation", () => {
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+
+    expect(screen.queryByRole("heading", { name: "Delete Acme Cloud?" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /edit/i })).toBeNull();
+  });
+});
+
+describe("Board moving a card from the chooser", () => {
+  it("writes once, with that card and the chosen status", async () => {
+    deferMove();
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    expect(updateApplicationStatus).toHaveBeenCalledTimes(1);
+    expect(updateApplicationStatus).toHaveBeenCalledWith("a", ApplicationStatus.OFFER);
+  });
+
+  it("closes the chooser and shows the card in its new column before the write settles", async () => {
+    deferMove();
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    expect(screen.queryByRole("heading", { name: "Move Acme Cloud to…" })).toBeNull();
+    expect(column("Offer").getByText("Acme Cloud")).toBeInTheDocument();
+    expect(column("Applied").queryByText("Acme Cloud")).toBeNull();
+    expect(countOf("Applied")).toBe("1 application");
+    expect(countOf("Offer")).toBe("1 application");
+  });
+
+  it("keeps the card where it was moved once the stored list agrees", async () => {
+    const settle = deferMove();
+    const { rerender } = render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+    await act(async () => {
+      settle[0]?.({ ok: true, data: {} });
+    });
+    rerender(
+      <Board
+        now={NOW}
+        applications={[
+          { ...(CARDS[0] as JobApplication), status: ApplicationStatus.OFFER },
+          CARDS[1] as JobApplication,
+          CARDS[2] as JobApplication,
+        ]}
+      />,
+    );
+
+    expect(column("Offer").getByText("Acme Cloud")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toBeEmptyDOMElement();
+  });
+
+  it("puts the card back and says so when the write fails", async () => {
+    // The assertion that tells a chooser move from one that bypassed moveCard. A
+    // handler calling the server action directly would still call it once with
+    // the right status - which is all the first test here can see - and would then
+    // neither roll the card back nor report the failure. Both come from the same
+    // place a drop's do, so this fails only if the chooser stopped going there.
+    updateApplicationStatus.mockResolvedValue({ ok: false, error: FAILED.move });
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(FAILED.move));
+    // Waited for, not read straight after the message: the message is set when the
+    // write settles, and the optimistic placement is dropped when the transition
+    // around it does, which is a render later.
+    await waitFor(() => expect(column("Applied").getByText("Acme Cloud")).toBeInTheDocument());
+    expect(column("Offer").queryByText("Acme Cloud")).toBeNull();
+  });
+
+  it("puts the card back and says so when the action rejects", async () => {
+    // The action is typed never to throw. The board must survive one that does.
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    updateApplicationStatus.mockRejectedValue(new Error("database is locked"));
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(FAILED.move));
+    await waitFor(() => expect(column("Applied").getByText("Acme Cloud")).toBeInTheDocument());
+    consoleError.mockRestore();
+  });
+
+  it("leaves the card movable again after a failed move", async () => {
+    updateApplicationStatus.mockResolvedValue({ ok: false, error: FAILED.move });
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Move Acme Cloud" })).toBeEnabled(),
+    );
+    openChooser("Acme Cloud");
+    expect(screen.getByRole("heading", { name: "Move Acme Cloud to…" })).toBeInTheDocument();
+  });
+
+  it("cannot be moved again by any means while its own write is outstanding", async () => {
+    deferMove();
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    // Through the handle, which is disabled: the hook has no pending guard of its
+    // own, so asserting on a second call to the action would be asserting on a
+    // check that does not exist.
+    const handle = screen.getByRole("button", { name: "Move Acme Cloud" });
+    expect(handle).toBeDisabled();
+    fireEvent.click(handle);
+    expect(screen.queryByRole("heading", { name: "Move Acme Cloud to…" })).toBeNull();
+    expect(updateApplicationStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves every other card movable while one is outstanding", async () => {
+    deferMove();
+    render(<Board now={NOW} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Offer");
+
+    expect(screen.getByRole("button", { name: "Move Globex" })).toBeEnabled();
+    openChooser("Globex");
+    expect(screen.getByRole("heading", { name: "Move Globex to…" })).toBeInTheDocument();
+  });
+
+  it("resets the badge with the move, as a drop does", async () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    deferMove();
+    render(<Board now={new Date(TIMESTAMP.getTime() + 12 * DAY)} applications={CARDS} />);
+
+    openChooser("Acme Cloud");
+    await chooseColumn("Interview");
+
+    expect(screen.getByText("Today in Interview")).toBeInTheDocument();
+  });
+});
+
+describe("Board telling a click from a drag", () => {
+  /**
+   * A click as a pointer produces it: down, up, click, with nothing between.
+   *
+   * dnd-kit decides drag-or-click from pointer coordinates, not from layout, so
+   * it can be driven here. The fields are the ones its PointerSensor activator
+   * reads - a press that is not primary or not the main button never activates.
+   */
+  function tap(element: HTMLElement) {
+    const press = { isPrimary: true, button: 0, pointerId: 1, clientX: 40, clientY: 40 };
+    fireEvent.pointerDown(element, press);
+    fireEvent.pointerUp(element, press);
+    fireEvent.click(element);
+  }
+
+  it("opens the chooser for a press that never moved", () => {
+    // The regression test for the sensor's activation distance. Without it the
+    // sensor starts a drag on pointerdown, and starting one installs a
+    // document-level handler that stops the click that follows - so the handle's
+    // own onClick is unreachable and no tap can ever open the chooser. Written to
+    // fail with the distance removed, which is the one edit that nothing else in
+    // the suite would notice: every e2e move goes through the keyboard.
+    render(<Board now={NOW} applications={CARDS} />);
+
+    tap(screen.getByRole("button", { name: "Move Acme Cloud" }));
+
+    expect(screen.getByRole("heading", { name: "Move Acme Cloud to…" })).toBeInTheDocument();
+  });
+
+  it("opens the chooser for a press that drifted a pixel or two", () => {
+    render(<Board now={NOW} applications={CARDS} />);
+
+    const handle = screen.getByRole("button", { name: "Move Acme Cloud" });
+    const down = { isPrimary: true, button: 0, pointerId: 1, clientX: 40, clientY: 40 };
+    const up = { isPrimary: true, button: 0, pointerId: 1, clientX: 42, clientY: 41 };
+    fireEvent.pointerDown(handle, down);
+    fireEvent.pointerMove(document, up);
+    fireEvent.pointerUp(handle, up);
+    fireEvent.click(handle);
+
+    expect(screen.getByRole("heading", { name: "Move Acme Cloud to…" })).toBeInTheDocument();
   });
 });

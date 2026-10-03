@@ -14,6 +14,7 @@ import { useCallback, useState } from "react";
 import { ApplicationDialog } from "@/components/application-form/ApplicationDialog";
 import { ConfirmDeleteDialog } from "@/components/application-form/ConfirmDeleteDialog";
 import type { JobApplication } from "@/app/generated/prisma/client";
+import type { ApplicationStatus } from "@/app/generated/prisma/enums";
 import { BOARD_COLUMNS, groupApplicationsByStatus } from "@/lib/applications/board";
 import {
   columnAtPoint,
@@ -25,6 +26,7 @@ import { isApplicationStatus } from "@/lib/applications/status";
 import { summariseBoard } from "@/lib/applications/stats";
 import { BoardColumn } from "./BoardColumn";
 import { BoardStats } from "./BoardStats";
+import { MoveCardDialog } from "./MoveCardDialog";
 import { useBoardCards } from "./useBoardCards";
 
 /**
@@ -91,9 +93,10 @@ export function Board({
   now: Date;
 }) {
   const { shown, isCardBusy, error, moveCard, removeCard } = useBoardCards(applications, now);
-  // Only set for a keyboard move: after a pointer drag the person's attention is
-  // already where they dropped the card, and focusing would show a ring they
-  // did not ask for.
+  // Set for a keyboard move and for a move from the chooser, not for a pointer
+  // drag: after a drag the person's attention is already where they dropped the
+  // card, and focusing would show a ring they did not ask for. The other two have
+  // no such place - the key press or the dialog they chose from is gone.
   const [focusCardId, setFocusCardId] = useState<string | null>(null);
   const clearFocusTarget = useCallback(() => setFocusCardId(null), []);
 
@@ -112,11 +115,17 @@ export function Board({
   // thing that should close it.
   const [editing, setEditing] = useState<JobApplication | null>(null);
   const [deleting, setDeleting] = useState<JobApplication | null>(null);
+  // The same reason again, and the one most exposed to it: a chooser move rewrites
+  // `shown` the instant a column is picked, so an id looked up there would find
+  // the card already in its new column.
+  const [moving, setMoving] = useState<JobApplication | null>(null);
 
   const openEdit = useCallback((application: JobApplication) => setEditing(application), []);
   const closeEdit = useCallback(() => setEditing(null), []);
   const openDelete = useCallback((application: JobApplication) => setDeleting(application), []);
   const closeDelete = useCallback(() => setDeleting(null), []);
+  const openMove = useCallback((application: JobApplication) => setMoving(application), []);
+  const closeMove = useCallback(() => setMoving(null), []);
 
   // Closed before the write is started, not after: the optimistic removal takes
   // the card off the board immediately, and a confirmation still naming it would
@@ -130,8 +139,38 @@ export function Board({
     [removeCard],
   );
 
+  // Through planCardMove and moveCard, the path a drop takes, and not straight to
+  // the server action. That is what gives a chooser move the optimistic placement,
+  // the hold while it writes, the rollback and the failure message without any of
+  // them being written a second time. A handler that skipped it would still call
+  // the action once with the right status, which is all a component test of this
+  // can see - e2e/move-by-menu.spec.ts is what fails if it does.
+  //
+  // Closed before the write starts, for the reason confirmDelete gives.
+  const chooseMove = useCallback(
+    (application: JobApplication, to: ApplicationStatus) => {
+      setMoving(null);
+      const move = planCardMove(application.id, application.status, to);
+      if (move !== null) {
+        setFocusCardId(move.cardId);
+        moveCard(move);
+      }
+    },
+    [moveCard],
+  );
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // The distance is what lets the drag handle also be clicked. Without one the
+    // sensor starts a drag on pointerdown, and starting a drag installs a
+    // document-level handler that stops the click that follows - so the handle's
+    // own onClick, which opens the chooser, could never fire. With one, a press
+    // that stays within 5px is never a drag, its click goes through, and one that
+    // travels further is a drag exactly as before. 5px is above what a click
+    // drifts by and far below the distance to the next column.
+    //
+    // KeyboardSensor takes no such constraint, so the keyboard path is unchanged.
+    // Held by "Board telling a click from a drag", which fails with this removed.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     // Registering the sensor is not enough; the coordinate getter is what makes
     // one key press cross a column.
     useSensor(KeyboardSensor, { coordinateGetter: columnCoordinateGetter }),
@@ -202,6 +241,7 @@ export function Board({
             onFocusRestored={clearFocusTarget}
             onEdit={openEdit}
             onDelete={openDelete}
+            onMove={openMove}
             now={now}
             draggable
           />
@@ -220,6 +260,9 @@ export function Board({
         onConfirm={confirmDelete}
         onCancel={closeDelete}
       />
+      {/* Dismissing it sets no focus target: nothing unmounts, so the browser's own
+          restoration returns focus to the handle the card focused before opening. */}
+      <MoveCardDialog application={moving} onChoose={chooseMove} onCancel={closeMove} />
     </DndContext>
   );
 }

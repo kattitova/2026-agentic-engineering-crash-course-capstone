@@ -52,6 +52,16 @@ interface ApplicationCardProps {
   /** Asks for this application to be deleted, which the board confirms first. */
   onDelete?: (application: JobApplication) => void;
   /**
+   * Asks for a chooser to move this application, called when the drag handle is
+   * clicked. Absent when the card is rendered outside the board.
+   *
+   * The handle is both the drag source and this. A press that never travels
+   * reaches here; one that does is a drag, and dnd-kit stops the click that
+   * follows it - which only works because the board's PointerSensor has an
+   * activation distance (see Board.tsx).
+   */
+  onMove?: (application: JobApplication) => void;
+  /**
    * The instant the board was served, which the day count is measured against.
    *
    * Required, with no default. This component is in the client bundle, so it
@@ -84,6 +94,7 @@ export function ApplicationCard({
   isCardBusy = false,
   onEdit,
   onDelete,
+  onMove,
   now,
   dragHandle,
 }: ApplicationCardProps) {
@@ -163,6 +174,18 @@ export function ApplicationCard({
             disabled={isCardBusy}
             aria-label={`Move ${application.company}`}
             className={`${CONTROL_CLASS} cursor-grab disabled:cursor-wait disabled:opacity-40`}
+            onClick={
+              onMove === undefined
+                ? undefined
+                : (event) => {
+                    // Focused here rather than left to the click, which does not focus a
+                    // button in WebKit - Safari and iOS, the device the chooser exists
+                    // for. The chooser's dialog gives focus back to whatever held it when
+                    // it opened, so this is what makes that the handle on every engine.
+                    event.currentTarget.focus();
+                    onMove(application);
+                  }
+            }
             {...dragHandle?.attributes}
             {...dragHandle?.listeners}
           >

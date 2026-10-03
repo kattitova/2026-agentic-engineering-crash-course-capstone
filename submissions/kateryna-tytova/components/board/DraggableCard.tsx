@@ -13,6 +13,7 @@ interface DraggableCardProps {
   onFocusRestored?: () => void;
   onEdit?: (application: JobApplication) => void;
   onDelete?: (application: JobApplication) => void;
+  onMove?: (application: JobApplication) => void;
   now: Date;
 }
 
@@ -30,6 +31,7 @@ export function DraggableCard({
   onFocusRestored,
   onEdit,
   onDelete,
+  onMove,
   now,
 }: DraggableCardProps) {
   const handleRef = useRef<HTMLButtonElement>(null);
@@ -65,6 +67,7 @@ export function DraggableCard({
         isCardBusy={isCardBusy}
         onEdit={onEdit}
         onDelete={onDelete}
+        onMove={onMove}
         now={now}
         dragHandle={{ attributes, listeners, ref: handleRef }}
       />
