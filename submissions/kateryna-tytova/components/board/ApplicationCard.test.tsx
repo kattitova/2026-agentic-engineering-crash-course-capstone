@@ -502,11 +502,14 @@ describe("ApplicationCard's move control", () => {
     expect(onMove).not.toHaveBeenCalled();
   });
 
-  it("does nothing when clicked on a card rendered without a chooser", () => {
+  it("does not take focus when clicked on a card rendered without a chooser", () => {
+    // Focusing the handle belongs to opening the chooser, so with none to open a
+    // click must leave focus where it was. Asserted on focus rather than on
+    // "does not throw": a missing guard that did not throw would pass that.
     render(<ApplicationCard now={NOW} application={application()} />);
 
-    expect(() =>
-      fireEvent.click(screen.getByRole("button", { name: "Move Acme Cloud" })),
-    ).not.toThrow();
+    fireEvent.click(screen.getByRole("button", { name: "Move Acme Cloud" }));
+
+    expect(document.body).toHaveFocus();
   });
 });
