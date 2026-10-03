@@ -1,7 +1,7 @@
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { Ref } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
-import { BOARD_COLUMNS } from "@/lib/applications/board";
+import { statusLabel } from "@/lib/applications/board";
 import {
   daysInStatus,
   describeDaysInStatus,
@@ -75,18 +75,6 @@ interface ApplicationCardProps {
    * DndContext, which keeps this component renderable — and testable — on its own.
    */
   dragHandle?: DragHandleBinding;
-}
-
-/**
- * The human-readable name of a status, from the one place that owns the five.
- *
- * A stored status outside the five is possible — SQLite does not enforce the
- * enum — and such a row is left off the board entirely, so this is only ever
- * asked about a status that has a column. The fallback exists because the type
- * cannot say that, not because it is expected.
- */
-function statusLabel(status: JobApplication["status"]): string {
-  return BOARD_COLUMNS.find((column) => column.status === status)?.label ?? status;
 }
 
 export function ApplicationCard({

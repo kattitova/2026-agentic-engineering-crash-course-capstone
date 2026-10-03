@@ -32,6 +32,18 @@ export const BOARD_COLUMNS: readonly BoardColumn[] = COLUMN_ORDER.map((status) =
   ...COLUMN_DEFINITIONS[status],
 }));
 
+/**
+ * The human-readable name of a status, from the one place that owns the five.
+ *
+ * A stored status outside the five is possible - SQLite does not enforce the
+ * enum - and such a row is left off the board entirely, so this is only ever
+ * asked about a status that has a column. The fallback exists because the type
+ * cannot say that, not because it is expected.
+ */
+export function statusLabel(status: ApplicationStatus): string {
+  return BOARD_COLUMNS.find((column) => column.status === status)?.label ?? status;
+}
+
 export type ApplicationsByStatus = Record<ApplicationStatus, JobApplication[]>;
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import { ApplicationStatus } from "@/app/generated/prisma/enums";
-import { BOARD_COLUMNS, groupApplicationsByStatus } from "./board";
+import { BOARD_COLUMNS, groupApplicationsByStatus, statusLabel } from "./board";
 
 const TIMESTAMP = new Date("2026-09-01T00:00:00.000Z");
 
@@ -129,5 +129,21 @@ describe("groupApplicationsByStatus", () => {
     );
 
     expect(groupedIds.sort()).toEqual(["a", "b", "c", "d", "e"]);
+  });
+});
+
+describe("statusLabel", () => {
+  it("names every status the way its column does", () => {
+    // One source for the five, so the card's badge, the chooser and the column
+    // heading can never disagree about what a status is called.
+    for (const column of BOARD_COLUMNS) {
+      expect(statusLabel(column.status)).toBe(column.label);
+    }
+  });
+
+  it("falls back to the stored value for a status with no column", () => {
+    // SQLite does not enforce the enum, and the type cannot say a status is one of
+    // the five, so the answer for anything else is the value itself.
+    expect(statusLabel("ARCHIVED" as ApplicationStatus)).toBe("ARCHIVED");
   });
 });

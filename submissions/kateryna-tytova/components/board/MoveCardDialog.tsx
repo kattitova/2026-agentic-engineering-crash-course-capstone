@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import type { JobApplication } from "@/app/generated/prisma/client";
 import type { ApplicationStatus } from "@/app/generated/prisma/enums";
-import { BOARD_COLUMNS } from "@/lib/applications/board";
+import { statusLabel } from "@/lib/applications/board";
 import { movableColumns } from "@/lib/applications/move";
 
 export interface MoveCardDialogProps {
@@ -68,7 +68,7 @@ export function MoveCardDialog({ application, onChoose, onCancel }: MoveCardDial
                 lands on the first choice, so without this the one fact the chooser
                 exists to show is outside what a screen reader announces on opening. */}
             <p id={descriptionId} className="text-sm leading-5 text-slate-600">
-              {`Currently in ${currentLabel(application.status)}.`}
+              {`Currently in ${statusLabel(application.status)}.`}
             </p>
           </div>
 
@@ -101,9 +101,4 @@ export function MoveCardDialog({ application, onChoose, onCancel }: MoveCardDial
       )}
     </dialog>
   );
-}
-
-/** A stored status outside the five has no column; the raw value is the fallback. */
-function currentLabel(status: JobApplication["status"]): string {
-  return BOARD_COLUMNS.find((column) => column.status === status)?.label ?? status;
 }
