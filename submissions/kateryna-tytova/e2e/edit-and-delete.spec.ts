@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { resetBoard, withDatabase } from "./reset-board";
+import { tabTrail } from "./tab-trail";
 
 /** Seeded by `npm run e2e:db`: Acme Cloud sits in Applied with a posting link. */
 const APPLIED = { id: "e2e-applied", company: "Acme Cloud", position: "Frontend Engineer" };
@@ -225,38 +226,6 @@ test("dismissing the confirmation with Escape keeps the application", async ({ p
   await expect(confirmDialog(page, INTERVIEW.company)).toBeHidden();
   expect(storedRow(INTERVIEW.id)).toBeDefined();
 });
-
-/**
- * Reports every Tab press as either inside the open dialog, outside it, or
- * parked on the body as the cycle wraps.
- *
- * `wrap` is allowed and is not a leak: Chromium parks focus on the body for one
- * step. What must never happen is focus landing on a focusable element outside
- * the dialog — a card's "Move ..." handle, or the header's add control — which
- * is what show() in place of showModal() produces.
- */
-async function tabTrail(page: Page, presses: number): Promise<string[]> {
-  const trail: string[] = [];
-  for (let index = 0; index < presses; index += 1) {
-    await page.keyboard.press("Tab");
-    trail.push(
-      await page.evaluate(() => {
-        const active = document.activeElement;
-        if (!active || active === document.body || active === document.documentElement) {
-          return "wrap";
-        }
-        const inDialog = document.querySelector("dialog[open]")?.contains(active);
-        const label =
-          active.getAttribute("name") ??
-          active.getAttribute("aria-label") ??
-          active.textContent?.trim().slice(0, 30) ??
-          active.tagName.toLowerCase();
-        return `${inDialog ? "in" : "OUTSIDE"}:${label}`;
-      }),
-    );
-  }
-  return trail;
-}
 
 test("keeps focus inside the edit form and gives it back to the card's control", async ({
   page,
