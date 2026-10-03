@@ -4,19 +4,18 @@
     "defaultMode": "default",
     "allow": [
       "Read",
-      "Bash(pnpm check)",
-      "Bash(pnpm test *)",
-      "Bash(pnpm typecheck)",
-      "Bash(pnpm lint)",
-      "Bash(pnpm agent:log *)",
+      "Bash(npm run verify)",
+      "Bash(npm run test *)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)"
     ],
     "ask": [
       "Bash(git push *)",
-      "Bash(pnpm add *)",
-      "Bash(pnpm install *)"
+      "Bash(npm add *)",
+      "Bash(npm install *)"
     ],
     "deny": [
       "Read(./.env)",
@@ -35,7 +34,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-env.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-env.mjs"
+            ],
             "timeout": 10
           }
         ]
@@ -46,7 +47,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/log-action.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/log-action.mjs"
+            ],
             "timeout": 10
           }
         ]
@@ -59,7 +62,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/log-action.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/log-action.mjs"
+            ],
             "timeout": 10
           }
         ]
@@ -70,7 +75,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/review-ready.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/review-ready.mjs"
+            ],
             "timeout": 10
           }
         ]
@@ -83,12 +90,17 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/log-action.mjs"],
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/log-action.mjs"
+            ],
             "timeout": 10
           }
         ]
       }
     ]
   },
-  "enabledMcpjsonServers": ["context7", "next-devtools"]
+  "enabledMcpjsonServers": [
+    "context7",
+    "next-devtools"
+  ]
 }
