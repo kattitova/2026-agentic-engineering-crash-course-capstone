@@ -140,7 +140,7 @@ next; the rest because `showModal()` and focus restoration are the browser's.
 
 ## 6. The one check that stays manual
 
-- [ ] 6.1 Check the chooser on a real touch device or a device-emulating browser:
+- [x] 6.1 Check the chooser on a real touch device or a device-emulating browser:
   tapping the handle opens it, choosing a column moves the card, and the drag
   gesture still fails as the proposal says it knowingly does. Record the result in
   this change's `apply-notes.md`, stating that it was a manual check and on which

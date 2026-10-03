@@ -14,14 +14,28 @@ what was not checked.
 - Tapping `Interview` moves the card, the move is stored, and focus is on the card's
   handle afterwards. Passed.
 
-**Not checked, so 6.1 is not ticked:**
+**On a real phone** (reported by the author on 2026-10-03; `npm run dev` served over
+the LAN):
 
-- A real phone. Nothing here has run on iOS or Android.
-- That a touch drag *still fails*, as the proposal says it knowingly does. It was not
-  observed on the emulation, and a swipe through the emulator is not a finger.
-- WebKit. Focus returning to the handle after a *dismissal* is guaranteed here by
-  focusing the handle before the chooser opens, because WebKit does not focus a button
-  on click; both Playwright projects are Chromium, so that reasoning is untested.
+- The chooser opens when the handle is tapped. Reported working.
+- Choosing a status moves the card between columns. Reported working.
+- The move survives a reload. Reported working.
+- A finger drag on the handle still fails, as the proposal says it knowingly does: the
+  card catches and the page scrolls. This is what `spec.md`'s 2026-10-03 entry rests on,
+  so it now rests on an observation and not on the reading of dnd-kit's source.
+
+The device and browser were not recorded.
+
+Still not checked anywhere: WebKit under automation. Focus returning to the handle after
+a *dismissal* is guaranteed here by focusing the handle before the chooser opens, because
+WebKit does not focus a button on click; both Playwright projects are Chromium, so that
+reasoning is untested apart from whatever the phone happens to be running.
+
+**An unexplained first attempt.** The author first saw the page render on the phone with
+no button responding. A page loaded by LAN IP from a headless Chromium hydrated and opened
+the chooser against the same running dev server, with no console errors, so
+`allowedDevOrigins` blocking dev assets - the first hypothesis - was **not** confirmed. The
+cause was not found; a stale tab or a page opened before the server was ready is a guess.
 
 ## Mutation checks on the e2e tests
 
