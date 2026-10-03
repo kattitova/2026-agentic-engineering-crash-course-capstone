@@ -88,6 +88,20 @@ describe("MoveCardDialog", () => {
     expect(screen.queryByRole("button", { name: "Interview" })).not.toBeInTheDocument();
   });
 
+  it("is described by the column the card is in now", () => {
+    // Focus lands on the first choice, so the description is what announces where
+    // the card is. Without it the fact is in the DOM and outside what is read out.
+    render(
+      <MoveCardDialog
+        application={application({ status: ApplicationStatus.INTERVIEW })}
+        onChoose={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription("Currently in Interview.");
+  });
+
   it("hands the chosen column back with the application, and does not cancel", () => {
     const onChoose = vi.fn();
     const onCancel = vi.fn();

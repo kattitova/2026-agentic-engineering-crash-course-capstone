@@ -32,6 +32,7 @@ export function MoveCardDialog({ application, onChoose, onCancel }: MoveCardDial
   const open = application !== null;
   // Per instance, for the same reason the other dialogs' ids are.
   const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -50,6 +51,7 @@ export function MoveCardDialog({ application, onChoose, onCancel }: MoveCardDial
       ref={dialogRef}
       onClose={onCancel}
       aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       className="w-full max-w-sm rounded-2xl p-0 backdrop:bg-slate-900/40 open:m-auto"
     >
       {/* Mounted only while open, so the heading never names a card the dialog has
@@ -61,8 +63,11 @@ export function MoveCardDialog({ application, onChoose, onCancel }: MoveCardDial
               {`Move ${application.company} to…`}
             </h2>
             {/* Text, not a disabled button: the current column is information, and a
-                disabled control in a list of choices reads as one that is broken. */}
-            <p className="text-sm leading-5 text-slate-600">
+                disabled control in a list of choices reads as one that is broken.
+                It is the dialog's description, as ConfirmDeleteDialog's body is: focus
+                lands on the first choice, so without this the one fact the chooser
+                exists to show is outside what a screen reader announces on opening. */}
+            <p id={descriptionId} className="text-sm leading-5 text-slate-600">
               {`Currently in ${currentLabel(application.status)}.`}
             </p>
           </div>
