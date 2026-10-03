@@ -418,3 +418,44 @@ plan, and why. Empty is fine on Day 0.)_
   rows straight into `e2e.db` with better-sqlite3, and `resetBoard` restores the
   snapshot in one transaction, so a four-digit total is a thousand rows in one
   commit. It is now measured there, in a real browser, at both viewports.
+
+- **2026-10-03 — moving a card gains a third activator, and touch drag is
+  knowingly left broken (MVP item 3).** On a touch device there was no way to
+  change a status. The pointer drag dies the moment the finger moves: nothing sets
+  `touch-action: none`, so the browser claims the gesture for scrolling and the
+  `pointercancel` that follows cancels the drag. The keyboard path works but a
+  phone has no arrow keys, and the edit form omits `status` on purpose. Item 3 says
+  "drag a card between columns"; a card can now also be moved by tapping its
+  handle and choosing a column from a dialog.
+
+  This refines the 2026-09-29 and 2026-10-01 entries; it does not reverse them.
+  Those say status has no picker and is owned by the drag-and-drop path, because a
+  form that set status alongside the other fields would give `status`,
+  `appliedDate` and `statusChangedAt` a second owner with a second set of rules.
+  The chooser is not that: it goes through the same `planCardMove` and `moveCard`
+  a drop does, so the three fields keep one owner and one set of rules. What is
+  added is a second *activator* of the same move, and every guarantee a move has
+  already — stored, counted, held while writing, rolled back on failure, badge and
+  flag recalculated — applies to it without being written again.
+
+  Touch drag is left broken deliberately, not overlooked. On a phone the board is a
+  single column, so five columns stack and a Wishlist-to-Offer drag needs about
+  2000px of autoscroll with a finger held down; a drag that technically works and
+  cannot be used is worth less than the chooser. Making it work would also cost the
+  page its own vertical scroll wherever a finger lands on a handle. Non-goals say
+  mobile "just needs to work reasonably well" — which permits leaving a gesture
+  out, and does not permit leaving the status unreachable. That is what this fixes.
+
+  The chooser is offered on every device, not swapped in for touch. Deciding from
+  `matchMedia('(pointer: coarse)')` needs `window`, so the server and the first
+  client render would differ — the failure the required `now` prop and the fixed
+  `DndContext` id exist to prevent — and it reports wrongly on a touchscreen laptop
+  or a tablet with a trackpad. It is also the way a trackpad or screen-reader user
+  reaches a card without holding a drag.
+
+  It is not opened from the keyboard. Space and Enter on the handle already start a
+  keyboard move, and dnd-kit calls `preventDefault()` on them, so the two cannot
+  collide; freeing a key for the chooser would mean replacing dnd-kit's key table,
+  which the arrow-key path runs on. A keyboard user can already reach every column.
+
+  No data-model change, so no `npx prisma db push`.
