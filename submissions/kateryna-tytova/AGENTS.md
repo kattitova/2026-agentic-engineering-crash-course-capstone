@@ -132,8 +132,6 @@ ever overwrites them, this section is the rule that survives, so re-add both off
 - If a task looks bigger than "one feature at a time," break it into smaller
   steps and propose a plan before writing code.
 
-<!-- BEGIN:nextjs-agent-rules -->
-
 ## OpenSpec tooling
 
 Two things cost a session's time once each; both are environment facts, not
@@ -152,6 +150,8 @@ decisions.
   for the change, and confirm the active change directory is intact. It is
   gitignored, because it was once committed and then blocked archiving for
   anyone who cloned the repo.
+
+<!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
 
