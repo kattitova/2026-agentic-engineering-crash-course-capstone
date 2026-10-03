@@ -150,14 +150,14 @@ next; the rest because `showModal()` and focus restoration are the browser's.
 ## 7. Gates
 
 - [x] 7.1 Run `npm run verify` and make it pass with no errors.
-- [ ] 7.2 Run `openspec verify --change move-card-by-menu` (with Node 22 on
+- [x] 7.2 Run `openspec verify --change move-card-by-menu` (with Node 22 on
   `PATH`) and resolve anything it reports, so no review pass is spent discovering
   that the artifacts and the code disagree.
-- [ ] 7.3 **Ask the user** whether to run the `reviewer` agent on the diff, and
+- [x] 7.3 **Ask the user** whether to run the `reviewer` agent on the diff, and
   wait for their answer. Do not launch it. If they say yes, it is run by hand as
   `node .claude/hooks/review.mjs move-card-by-menu --agent reviewer`, with the
   change name as its only argument. Verify this task by having asked and received
   an answer — a decline is a complete answer.
-- [ ] 7.4 If a review was run and raised findings, fix them, then re-run both
+- [x] 7.4 If a review was run and raised findings, fix them, then re-run both
   `npm run verify` and `openspec verify`, and **ask** before any re-review rather
   than starting one.

@@ -110,6 +110,11 @@ says in as many words that it is "the only place either is checked", and
 `e2e/edit-and-delete.spec.ts:233-237` exists to catch "exactly what `show()` in
 place of `showModal()` produces".
 
+The dialog is described, as well as named: the "Currently in <column>." line is its
+`aria-describedby`, the way `ConfirmDeleteDialog`'s body is. Focus lands on the first
+choice when it opens, so without that the one fact the chooser exists to show — where
+the card is now — is in the DOM but outside what is read out on opening.
+
 A `MoveCardDialog` opened with `show()` would satisfy every component test and
 break three of this change's scenarios. So the Escape, the inert background and
 the focus-after-dismissal scenarios are e2e tasks, written the same way the edit

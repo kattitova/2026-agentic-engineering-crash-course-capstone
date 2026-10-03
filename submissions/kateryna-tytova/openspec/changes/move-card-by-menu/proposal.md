@@ -108,9 +108,16 @@ Code:
   changed handle. The two *gestures* cannot be told apart in a component test
   beyond the sensor's own threshold — see design §1 and the sensor regression
   test in task 4.9.
-- `e2e/move-card.spec.ts` or a sibling spec — a menu move that survives a reload,
-  the chooser's Escape, inert background and focus-after-dismissal, a failed menu
-  move, and a pointer drag (which nothing drives today).
+- `e2e/move-by-menu.spec.ts` — new: a menu move that survives a reload, the
+  chooser's Escape, inert background and focus-after-dismissal, a failed menu move,
+  a pointer drag (which nothing drives today), and that a keyboard move opens no
+  chooser.
+- `e2e/tab-trail.ts` — new: `tabTrail` moved out of `e2e/edit-and-delete.spec.ts`
+  so the spec above can share it. A spec cannot import another spec without
+  registering its tests again, and a copy can drift to a version that stops
+  noticing a leak. A refactor with no behaviour change, committed apart from the
+  feature.
+- `e2e/edit-and-delete.spec.ts` — imports `tabTrail` instead of defining it.
 - `spec.md` — change-log entry recording the second activator with one owner, and
   that touch drag is knowingly left broken.
 
